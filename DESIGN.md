@@ -142,7 +142,7 @@
 
 **시간 계산 규칙**
 - 상태는 "시작 시각 + 누적 시간"으로 관리한다. PAUSED가 되면 그 시점의 남은 시간(또는 경과 시간)을 저장하고, 이어하기 때 **새 시작 시각을 잡아 남은 시간부터** 다시 센다. 멈춰 있던 시간은 계산에 들어가지 않는다.
-- **활성 운동 시간** = EXERCISE 상태에서 실제로 흐른 시간의 합계. COUNTDOWN·REST·PAUSED·준비 화면 시간은 제외한다. 세트 완료·세트 건너뛰기·일시정지 진입·종료 확정 때마다 그 세트에서 흐른 EXERCISE 시간을 합계에 더하고, 스냅샷에도 저장한다(도중에 끊겨도 빠지지 않게).
+- **활성 운동 시간** = EXERCISE 상태에서 실제로 흐른 시간의 합계. COUNTDOWN·REST·PAUSED·준비 화면 시간은 제외한다. 세트 완료·세트 건너뛰기·종료 확정 때 그 세트에서 흐른 EXERCISE 시간을 확정분에 더한다. 진행 중이거나 일시정지 중인 세트의 경과분은 확정분에 더해 계산하므로, 어느 시점에 끊겨도 빠지지 않고 일시정지 시간은 들어가지 않는다. 스냅샷에도 이 값을 저장한다.
 
 **버튼 처리 규칙**
 - 모든 버튼은 공통 처리기(`lib/clickGuard.ts`)를 거친다. 같은 버튼을 0.5초 안에 다시 누르면 무시한다(`performance.now()` 비교).
@@ -239,6 +239,7 @@ components/           ← 화면 (Home, Ready, Session, Paused, Finish, Dialogs 
 lib/
   routines.ts         ← 샘플 루틴·기본값·입력 범위·값 검증
   machine.ts          ← 6개 상태·전이표 (순수 계산, 화면 무관)
+  session.ts          ← machine+timer를 이어 붙인 자동 진행(카운트다운→운동→휴식→다음 세트→READY/COMPLETED), 일시정지·건너뛰기·종료, 활성 운동 시간
   timer.ts            ← performance.now 기반 경과 시간·틱 관리. 타이머는 한 번에 하나만 두고,
                         시작 전에 이전 틱을 반드시 해제하며 정리 함수를 돌려줘 개발 모드의 effect 이중 실행에서도 중복되지 않게 한다
   cues.ts             ← 안내 후보 생성·ID 중복·지각·우선순위·마지막 반복 예외 판단
@@ -271,7 +272,7 @@ lib/
 | 4 타이머 | §2.2 시간 계산 규칙, `lib/timer.ts`, §3.3 Vitest |
 | 5 상태 머신 | §2.2, `lib/machine.ts` |
 | 6 카운트다운·반복 카운트 | §2.2, `lib/machine.ts`·`timer.ts` |
-| 7 자동 진행·전환 로직 | §2.2, `lib/machine.ts` |
+| 7 자동 진행·전환 로직 | §2.2, `lib/session.ts`·`machine.ts` |
 | 8~9 비프음 | §2.4, `lib/audio.ts`·`cues.ts` |
 | 10 음성 | §2.4, `lib/audio.ts` |
 | 11 우선순위·중복·복구 | §2.2-3, §2.4, `lib/cues.ts`·`audio.ts`·`lifecycle.ts` |
