@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { copyRoutine, deleteRoutine, loadMyRoutines } from "@/lib/myRoutines";
 import { loadPrefs, savePrefs, showDefaultRoutines, type PrefsState } from "@/lib/prefs";
-import { NICKNAME_MAX, greeting, loadProfile, saveProfile, validateNickname, type ProfileState } from "@/lib/profile";
+import { greeting, loadProfile, type ProfileState } from "@/lib/profile";
 import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
 import { SAMPLE_ROUTINES, cloneRoutine, type Routine } from "@/lib/routines";
 import AssetImage, { DumbbellIcon, SoftBlob } from "./AssetImage";
@@ -96,10 +96,8 @@ function SectionTitle({ children, icon }: { children: ReactNode; icon?: ReactNod
 export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, onGoTab }: Props) {
   // 처음 그릴 때는 기록이 없는 것으로 두고(서버 화면과 같게), 그려진 뒤에 저장소에서 읽는다
   const [recent, setRecent] = useState<Recent>({ kind: "none" });
-  // 닉네임 상태. null = 아직 읽기 전(입력 카드가 번쩍 보였다 사라지지 않게 읽기 전에는 아무것도 안 보인다)
+  // 닉네임 상태(인사말에만 쓴다. 입력은 설정 시트에서). null = 아직 읽기 전
   const [profile, setProfile] = useState<ProfileState | null>(null);
-  const [nickInput, setNickInput] = useState("");
-  const [nickError, setNickError] = useState<string | null>(null);
   // 내 루틴. null = 읽기 전, "unreadable" = 읽을 수 없음
   const [myRoutines, setMyRoutines] = useState<Routine[] | "unreadable" | null>(null);
   // 삭제 확인창: 대상 루틴 id와 실패 안내
@@ -125,33 +123,12 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  function handleSaveNickname() {
-    const v = validateNickname(nickInput);
-    if (!v.ok) {
-      setNickError(v.error);
-      return;
-    }
-    if (!saveProfile(v.nickname)) {
-      setNickError("저장하지 못했어요. 다시 시도하거나 건너뛰기를 눌러 주세요.");
-      return;
-    }
-    setNickError(null);
-    setProfile({ kind: "set", nickname: v.nickname });
-  }
-
-  function handleSkipNickname() {
-    saveProfile(null); // 저장에 실패해도 이번에는 그냥 넘어간다(다음에 다시 물어볼 수 있다)
-    setProfile({ kind: "set", nickname: null });
-  }
-
   /** 설정 시트에서 데이터 초기화가 끝났을 때: 화면을 처음 상태로 되돌린다 */
   function handleResetDone() {
     setMyRoutines([]);
     setPrefs({ kind: "none" }); // 기본 루틴을 다시 보여 주고 한 번 더 묻는다
     setRecent({ kind: "none" });
-    setProfile({ kind: "none" }); // 닉네임을 새로 물어본다
-    setNickInput("");
-    setNickError(null);
+    setProfile({ kind: "none" });
   }
 
   /** 기본 루틴 보기 선택을 저장한다(저장에 실패해도 이번 화면에는 바로 반영한다) */
@@ -161,8 +138,8 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
   }
 
   const defaultsVisible = showDefaultRoutines(prefs);
-  // 닉네임 카드에 답한 뒤(또는 이미 답한 상태)에 처음 한 번 묻는다
-  const askDefaults = prefs?.kind === "none" && profile !== null && profile.kind !== "none";
+  // 아직 고른 적이 없으면 처음 한 번 묻는다
+  const askDefaults = prefs?.kind === "none";
 
   const mine = Array.isArray(myRoutines) ? myRoutines : [];
   const deleteTarget = deleting ? mine.find((r) => r.id === deleting.id) : undefined;
@@ -225,178 +202,33 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
         </div>
       </header>
 
-      {/* 첫 실행: 닉네임 입력(선택). 건너뛰기를 누르면 다시 묻지 않는다 */}
-      {profile?.kind === "none" && (
-        <form
-          aria-labelledby="nick-title"
-          className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSaveNickname();
-          }}
-        >
-          <h2 id="nick-title" className="text-base font-bold">
-            닉네임을 알려 주세요 <span className="text-sm font-normal text-muted">(선택)</span>
-          </h2>
-          <p className="text-sm text-muted">입력하면 홈 인사말에 표시돼요. 이 폰에만 저장돼요.</p>
-          <label htmlFor="nickname" className="sr-only">
-            닉네임
-          </label>
-          <input
-            id="nickname"
-            type="text"
-            autoComplete="off"
-            maxLength={NICKNAME_MAX * 2}
-            value={nickInput}
-            onChange={(e) => setNickInput(e.target.value)}
-            aria-invalid={nickError ? true : undefined}
-            aria-describedby={nickError ? "nick-error" : undefined}
-            placeholder={`최대 ${NICKNAME_MAX}글자`}
-            className={`min-h-11 rounded-xl bg-background px-3 text-base outline-none focus:ring-2 ${
-              nickError ? "ring-2 ring-red-400" : "focus:ring-accent"
-            }`}
-          />
-          {nickError && (
-            <p id="nick-error" role="alert" className="text-sm text-danger">
-              {nickError}
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={handleSkipNickname} className="min-h-11 rounded-xl bg-chip px-4">
-              건너뛰기
-            </button>
-            <button type="submit" className="min-h-11 rounded-xl bg-accent px-4 font-bold text-on-accent shadow-button">
-              저장
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* 처음 한 번: 기본 루틴을 쓸지 묻는다 */}
-      {askDefaults && (
-        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
-          <h2 id="defaults-title" className="text-base font-bold">
-            기본 루틴을 쓸까요?
-          </h2>
-          <p className="text-sm text-muted">
-            상체 데이·하체 데이는 바로 써 볼 수 있는 예시 루틴이에요. 내 루틴만 쓰려면 숨길 수 있고, 나중에 설정(톱니)
-            에서 다시 볼 수 있어요.
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => chooseDefaults("hide")} className="min-h-11 rounded-xl bg-chip px-3">
-              내 루틴만 쓸게요
-            </button>
-            <button
-              type="button"
-              onClick={() => chooseDefaults("show")}
-              className="min-h-11 rounded-xl bg-accent px-3 font-bold text-on-accent shadow-button"
-            >
-              기본 루틴 쓸게요
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* 최근 기록 */}
-      <section aria-labelledby="recent-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
-        <h2 id="recent-title" className="flex items-center gap-2 text-lg font-bold">
-          <span className="text-accent-ink">
-            <CalendarIcon />
-          </span>
-          최근 기록
-        </h2>
-        {recent.kind === "line" ? (
-          <p className="rounded-2xl bg-background px-4 py-3 text-base">{recent.text}</p>
-        ) : recent.kind === "unreadable" ? (
-          <p className="rounded-2xl bg-danger-soft px-4 py-3 text-base text-danger">저장된 기록을 읽을 수 없어요</p>
-        ) : (
-          <div className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-line px-4 py-3">
-            <AssetImage
-              src="/mascot/empty-record.webp"
-              alt=""
-              width={56}
-              fallback={
-                <SoftBlob tone="peach">
-                  <DumbbellIcon className="h-1/2 w-1/2 text-peach-ink" />
-                </SoftBlob>
-              }
-            />
-            <p className="text-base text-muted">아직 기록이 없습니다</p>
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => onGoTab("records")}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-base font-bold text-on-accent shadow-button active:opacity-80"
-        >
-          <CalendarIcon />
-          운동 캘린더 보기
-          <span aria-hidden="true">›</span>
-        </button>
-      </section>
-
-      {/* 루틴 */}
-      <div className="flex items-center justify-between gap-3">
-        <SectionTitle
-          icon={
-            <span className="text-lavender-ink">
-              <DumbbellIcon className="h-6 w-6" />
-            </span>
-          }
-        >
-          루틴
-        </SectionTitle>
-        <button
-          type="button"
-          onClick={onCreateRoutine}
-          className="min-h-11 rounded-full bg-lavender px-4 text-base font-bold text-lavender-ink shadow-card active:opacity-80"
-        >
-          + 루틴 만들기
-        </button>
-      </div>
-
-      {defaultsVisible && (
-        <section aria-labelledby="routine-title" className="flex flex-col gap-3">
-          <h2 id="routine-title" className="sr-only">
-            기본 루틴
-          </h2>
-          {SAMPLE_ROUTINES.map((r) => {
-            const s = DEFAULT_STYLE[r.id] ?? DEFAULT_STYLE.upper;
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => {
-                  const routine = cloneRoutine(r.id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
-                  if (routine) onSelectRoutine(routine);
-                }}
-                aria-label={`${r.name} 시작`}
-                className={`flex min-h-[7rem] items-center gap-3 rounded-3xl ${s.card} p-4 text-left shadow-card active:opacity-80`}
-              >
-                <RoutineArt src={s.art} tone={s.tone} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xl font-bold">{r.name}</span>
-                  <span className="mt-1 block text-sm text-muted">{r.exercises.map((e) => e.name).join(" · ")}</span>
-                </span>
-                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full bg-surface shadow-card ${s.play}`}>
-                  <PlayIcon />
-                </span>
-              </button>
-            );
-          })}
-        </section>
-      )}
-
-      {myRoutines === "unreadable" && (
-        <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
-          저장된 내 루틴을 읽을 수 없어요.
-        </p>
-      )}
-
+      {/* 1. 내 루틴 */}
       <section aria-labelledby="mine-title" className="flex flex-col gap-3">
-        <h2 id="mine-title" className="text-sm font-medium text-muted">
-          내 루틴
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="mine-title">
+            <SectionTitle
+              icon={
+                <span className="text-lavender-ink">
+                  <DumbbellIcon className="h-6 w-6" />
+                </span>
+              }
+            >
+              내 루틴
+            </SectionTitle>
+          </h2>
+          <button
+            type="button"
+            onClick={onCreateRoutine}
+            className="min-h-11 rounded-full bg-lavender px-4 text-base font-bold text-lavender-ink shadow-card active:opacity-80"
+          >
+            + 루틴 만들기
+          </button>
+        </div>
+        {myRoutines === "unreadable" && (
+          <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
+            저장된 내 루틴을 읽을 수 없어요.
+          </p>
+        )}
         {mine.length === 0 && myRoutines !== "unreadable" && (
           <p className="rounded-2xl border-2 border-dashed border-line px-4 py-3 text-sm text-muted">
             아직 만든 루틴이 없어요. 위의 &quot;+ 루틴 만들기&quot;로 나만의 루틴을 만들어 보세요.
@@ -435,6 +267,113 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
             </div>
           </div>
         ))}
+      </section>
+
+      {/* 처음 한 번: 기본 루틴을 쓸지 묻는다 */}
+      {askDefaults && (
+        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
+          <h2 id="defaults-title" className="text-base font-bold">
+            기본 루틴을 쓸까요?
+          </h2>
+          <p className="text-sm text-muted">
+            상체 데이·하체 데이는 바로 써 볼 수 있는 예시 루틴이에요. 내 루틴만 쓰려면 숨길 수 있고, 나중에 설정(톱니)
+            에서 다시 볼 수 있어요.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => chooseDefaults("hide")} className="min-h-11 rounded-xl bg-chip px-3">
+              내 루틴만 쓸게요
+            </button>
+            <button
+              type="button"
+              onClick={() => chooseDefaults("show")}
+              className="min-h-11 rounded-xl bg-accent px-3 font-bold text-on-accent shadow-button"
+            >
+              기본 루틴 쓸게요
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* 2. 기본 루틴(숨길 수 있다. 다시 보이기는 설정 시트) */}
+      {defaultsVisible && (
+        <section aria-labelledby="routine-title" className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="routine-title">
+              <SectionTitle>기본 루틴</SectionTitle>
+            </h2>
+            {prefs?.kind === "set" && (
+              <button
+                type="button"
+                onClick={() => chooseDefaults("hide")}
+                className="min-h-11 rounded-full bg-chip px-4 text-sm text-muted active:opacity-80"
+              >
+                숨기기
+              </button>
+            )}
+          </div>
+          {SAMPLE_ROUTINES.map((r) => {
+            const s = DEFAULT_STYLE[r.id] ?? DEFAULT_STYLE.upper;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => {
+                  const routine = cloneRoutine(r.id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
+                  if (routine) onSelectRoutine(routine);
+                }}
+                aria-label={`${r.name} 시작`}
+                className={`flex min-h-[7rem] items-center gap-3 rounded-3xl ${s.card} p-4 text-left shadow-card active:opacity-80`}
+              >
+                <RoutineArt src={s.art} tone={s.tone} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xl font-bold">{r.name}</span>
+                  <span className="mt-1 block text-sm text-muted">{r.exercises.map((e) => e.name).join(" · ")}</span>
+                </span>
+                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full bg-surface shadow-card ${s.play}`}>
+                  <PlayIcon />
+                </span>
+              </button>
+            );
+          })}
+        </section>
+      )}
+
+      {/* 3. 최근 기록 */}
+      <section aria-labelledby="recent-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
+        <h2 id="recent-title" className="flex items-center gap-2 text-lg font-bold">
+          <span className="text-accent-ink">
+            <CalendarIcon />
+          </span>
+          최근 기록
+        </h2>
+        {recent.kind === "line" ? (
+          <p className="rounded-2xl bg-background px-4 py-3 text-base">{recent.text}</p>
+        ) : recent.kind === "unreadable" ? (
+          <p className="rounded-2xl bg-danger-soft px-4 py-3 text-base text-danger">저장된 기록을 읽을 수 없어요</p>
+        ) : (
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-line px-4 py-3">
+            <AssetImage
+              src="/mascot/empty-record.webp"
+              alt=""
+              width={56}
+              fallback={
+                <SoftBlob tone="peach">
+                  <DumbbellIcon className="h-1/2 w-1/2 text-peach-ink" />
+                </SoftBlob>
+              }
+            />
+            <p className="text-base text-muted">아직 기록이 없습니다</p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => onGoTab("records")}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-base font-bold text-on-accent shadow-button active:opacity-80"
+        >
+          <CalendarIcon />
+          운동 캘린더 보기
+          <span aria-hidden="true">›</span>
+        </button>
       </section>
 
       <button
