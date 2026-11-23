@@ -117,6 +117,7 @@ export default function Page() {
               onPause={workout.pause}
               onResume={workout.resume}
               awayPaused={workout.awayPaused}
+            wakeLockStatus={workout.wakeLockStatus}
               onSkip={workout.skip}
               onEnd={openEndDialog}
             />

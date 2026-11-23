@@ -26,7 +26,12 @@ import {
   type SessionExercise,
 } from "@/lib/session";
 import { createSoundEngine } from "@/lib/sound";
-import { keepAudioAlive, watchVisibility } from "@/lib/lifecycle";
+import {
+  createWakeLock,
+  keepAudioAlive,
+  watchVisibility,
+  type WakeLockStatus,
+} from "@/lib/lifecycle";
 import { buildSnapshot, clearSnapshot, saveSnapshot, type RestoreResult } from "@/lib/records";
 import { createTicker, elapsedMs } from "@/lib/timer";
 
@@ -83,6 +88,8 @@ export function useWorkout() {
   const sessionRef = useRef<Session | null>(null);
   // 스냅샷에 함께 남길 기록 ID와 루틴 이름
   const metaRef = useRef<Meta | null>(null);
+  // 화면 꺼짐 방지 결과(안내 문구를 보여 주기 위함). 아직 요청 전이면 null
+  const [wakeLockStatus, setWakeLockStatus] = useState<WakeLockStatus | null>(null);
   // 진행 상태를 저장하지 못했는가(새로고침하면 사라질 수 있다고 알리기 위함)
   const [snapshotFailed, setSnapshotFailed] = useState(false);
   // 소리 엔진은 처음 한 번만 만들어 계속 쓴다(이미 낸 안내 ID 기록을 유지하기 위함)
@@ -295,6 +302,25 @@ export function useWorkout() {
     return () => clearInterval(id);
   }, [hasSession, session]);
 
+  // 운동 중(종료 화면 전까지)에는 화면이 꺼지지 않게 요청한다. 화면이 숨겨지면 시스템이 놓으므로 다시 보일 때 다시 요청한다.
+  const wantsWakeLock = session !== null && session.machine.phase !== "COMPLETED";
+  useEffect(() => {
+    if (!wantsWakeLock) return;
+    const lock = createWakeLock();
+    let cancelled = false;
+    const acquire = () =>
+      void lock.acquire().then((status) => {
+        if (!cancelled) setWakeLockStatus(status);
+      });
+    acquire();
+    const stopWatch = watchVisibility({ onVisible: acquire });
+    return () => {
+      cancelled = true;
+      stopWatch();
+      void lock.release();
+    };
+  }, [wantsWakeLock]);
+
   // 화면에서 벗어나면(다른 앱 이동·화면 잠금) 자동 일시정지, 돌아오면 끊긴 오디오를 다시 깨운다
   useEffect(() => {
     const stopWatch = watchVisibility({ onHidden: () => autoPause(performance.now()) });
@@ -305,5 +331,5 @@ export function useWorkout() {
     };
   }, [autoPause]);
 
-  return { session, nowMs, awayPaused, snapshotFailed, restore, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
+  return { session, nowMs, awayPaused, wakeLockStatus, snapshotFailed, restore, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
 }

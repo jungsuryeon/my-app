@@ -13,6 +13,8 @@ type Props = {
   onResume: () => void;
   /** 화면 이탈·틱 끊김으로 자동 일시정지된 상태인가 */
   awayPaused: boolean;
+  /** 화면 꺼짐 방지 결과. 켜지지 않았으면 안내를 보여 준다 */
+  wakeLockStatus: "on" | "unsupported" | "failed" | null;
   /** 현재 세트 건너뛰기(운동 중에만 켜짐) */
   onSkip: () => void;
   /** 전체 종료(확인창을 띄운다) */
@@ -21,7 +23,7 @@ type Props = {
 
 // 운동 진행 화면: COUNTDOWN / EXERCISE / REST 세 상태를 보여 준다.
 // 계산은 하지 않고 lib/의 결과만 보여 준다.
-export default function Progress({ session, nowMs, onPause, onResume, awayPaused, onSkip, onEnd }: Props) {
+export default function Progress({ session, nowMs, onPause, onResume, awayPaused, wakeLockStatus, onSkip, onEnd }: Props) {
   const m = session.machine;
   const ex = session.exercises[m.exerciseIndex];
   const el = elapsedMs(session.clock, nowMs);
@@ -104,6 +106,13 @@ export default function Progress({ session, nowMs, onPause, onResume, awayPaused
         )}
       </div>
 
+      {(wakeLockStatus === "unsupported" || wakeLockStatus === "failed") && (
+        <p className="mb-3 text-center text-sm text-muted">
+          {wakeLockStatus === "unsupported"
+            ? "이 기기에서는 화면 꺼짐 방지를 쓸 수 없어요. 화면이 꺼지지 않게 직접 설정해 주세요."
+            : "화면 꺼짐 방지를 켜지 못했어요. 화면이 꺼지면 소리가 끊길 수 있어요."}
+        </p>
+      )}
       <div className="mb-3 grid grid-cols-2 gap-3">
         {paused ? (
           <button

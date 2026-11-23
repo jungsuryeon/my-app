@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { initAudio, playBeep, speakKorean } from "@/lib/audio";
-import { PHRASES, setDonePhrase } from "@/lib/cues";
+import { initAudio, playBeep, speakKorean, waitSpeechReady } from "@/lib/audio";
+import { PHRASES } from "@/lib/cues";
 import {
   toInput,
   validateInput,
@@ -38,12 +38,31 @@ const FIELDS: { name: FieldName; label: string; unit: string; decimal?: boolean;
 export default function Ready({ routine, exerciseIndex, onBack, backLabel = "←", onStart }: Props) {
   const exercise: Exercise = routine.exercises[exerciseIndex];
   const [input, setInput] = useState<ExerciseInput>(() => toInput(exercise));
-  const [audioMsg, setAudioMsg] = useState("");
+  const [testMsg, setTestMsg] = useState("");
 
   const { errors, values } = validateInput(input);
 
   function change(name: FieldName, value: string) {
     setInput((prev) => ({ ...prev, [name]: value }));
+  }
+
+  /** 소리 테스트: 비프음 두 번과 한국어 음성을 들려준다. 버튼을 누른 탭 안에서 오디오를 켠다(iPhone 규칙). */
+  async function handleSoundTest() {
+    if (!initAudio()) {
+      setTestMsg("이 브라우저에서는 오디오를 켤 수 없어요.");
+      return;
+    }
+    playBeep("rep");
+    playBeep("rep", 0.3);
+    setTestMsg("소리를 확인하는 중이에요…");
+    // 한국어 음성 목록은 늦게 채워질 수 있어 준비될 때까지 기다린다
+    const ready = await waitSpeechReady();
+    const spoke = ready && speakKorean("소리 테스트입니다. 이 목소리가 들리면 준비됐어요.");
+    setTestMsg(
+      spoke
+        ? "비프음과 음성이 들렸나요? 안 들리면 무음 모드와 이어폰 연결을 확인해 주세요."
+        : "한국어 음성을 쓸 수 없어요. 이 기기에서는 비프음으로 안내해요. 비프음이 안 들리면 무음 모드와 이어폰 연결을 확인해 주세요.",
+    );
   }
 
   function handleStart() {
@@ -124,45 +143,27 @@ export default function Ready({ routine, exerciseIndex, onBack, backLabel = "←
         )}
       </form>
 
-      {/* ⚠ 임시: 작업 8~11 소리 확인용. 정식 "소리 테스트" 버튼과 안내문이 생기는 작업 18에서 지운다. */}
-      <section className="mt-auto flex flex-col gap-2 rounded-2xl border border-dashed border-accent/40 p-4">
-        <h2 className="text-sm font-medium text-accent">임시: 소리 확인</h2>
+      {/* 소리 안내와 테스트 */}
+      <section className="mt-auto flex flex-col gap-3 rounded-2xl bg-surface p-4">
+        <div className="flex gap-2 text-sm text-muted">
+          <span aria-hidden="true">ⓘ</span>
+          <ul className="flex list-disc flex-col gap-1 pl-4">
+            <li>iPhone이 무음 모드이거나 이어폰 연결이 끊기면 소리가 나지 않거나 폰 스피커로 나올 수 있어요.</li>
+            <li>화면이 꺼지면 소리가 끊길 수 있어요. 운동 중에는 화면을 켜 두세요(가능한 기기에서는 꺼지지 않게 해 둬요).</li>
+          </ul>
+        </div>
         <button
           type="button"
-          onClick={() => {
-            const ok = initAudio();
-            if (ok) playBeep("rep");
-            setAudioMsg(ok ? "오디오 켬 — 짧은 소리가 났나요?" : "이 브라우저에서는 오디오를 켤 수 없어요");
-          }}
-          className="min-h-11 rounded-xl bg-surface px-4 text-base"
+          onClick={handleSoundTest}
+          className="min-h-11 rounded-xl bg-white/10 px-4 text-base font-medium"
         >
-          오디오 켜기 + 반복 비프
+          소리 테스트
         </button>
-        <button
-          type="button"
-          onClick={() => playBeep("setDone")}
-          className="min-h-11 rounded-xl bg-surface px-4 text-base"
-        >
-          세트 완료 비프(길게)
-        </button>
-        <button
-          type="button"
-          onClick={() => [0, 1, 2].forEach((s) => playBeep("countdown", s))}
-          className="min-h-11 rounded-xl bg-surface px-4 text-base"
-        >
-          휴식 3·2·1 비프 듣기
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const ok = speakKorean(setDonePhrase(1, exercise.restSec));
-            setAudioMsg(ok ? "음성 재생 요청함" : "한국어 음성을 쓸 수 없어요(오디오 켜기를 먼저 누르세요)");
-          }}
-          className="min-h-11 rounded-xl bg-surface px-4 text-base"
-        >
-          음성 듣기 (1번째 세트 완료)
-        </button>
-        {audioMsg && <p className="text-sm text-muted">{audioMsg}</p>}
+        {testMsg && (
+          <p role="status" className="text-sm text-muted">
+            {testMsg}
+          </p>
+        )}
       </section>
     </main>
   );

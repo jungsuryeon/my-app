@@ -224,6 +224,8 @@ export function createSpeaker(deps: {
 }
 
 let speaker: ReturnType<typeof createSpeaker> | null = null;
+/** 한국어 음성 준비가 끝나면 결과(음성 있음 여부)를 알려 주는 약속 */
+let speechPrep: Promise<boolean> | null = null;
 
 /**
  * 음성을 켠다. initAudio()와 같이 버튼 탭 안에서 불러야 한다.
@@ -239,7 +241,7 @@ export function initSpeech(): boolean {
         synth: synth as unknown as SynthLike,
         makeUtterance: (text) => new SpeechSynthesisUtterance(text) as unknown as UtteranceLike,
       });
-      void speaker.prepare();
+      speechPrep = speaker.prepare();
     }
     const unlock = new SpeechSynthesisUtterance(" ");
     unlock.volume = 0;
@@ -248,6 +250,11 @@ export function initSpeech(): boolean {
   } catch {
     return false;
   }
+}
+
+/** 한국어 음성 목록 준비를 기다린다. 한국어 음성이 있으면 true, 음성을 못 켰거나 없으면 false. */
+export function waitSpeechReady(): Promise<boolean> {
+  return speechPrep ?? Promise.resolve(false);
 }
 
 /** 한국어로 말한다. 음성을 못 켰거나 한국어 음성이 없으면 false. */
