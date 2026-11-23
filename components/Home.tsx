@@ -56,6 +56,16 @@ export default function Home() {
         >
           세트 완료 비프(길게)
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            // 휴식 마지막 3·2·1초 비프를 1초 간격으로 미리 들어 본다
+            [0, 1, 2].forEach((s) => playBeep("countdown", s));
+          }}
+          className="min-h-11 rounded-xl bg-surface px-4 text-base"
+        >
+          휴식 3·2·1 비프 듣기
+        </button>
         {audioMsg && <p className="text-sm text-muted">{audioMsg}</p>}
       </section>
     </main>

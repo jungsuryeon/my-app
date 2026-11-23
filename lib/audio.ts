@@ -111,11 +111,14 @@ export function isAudioReady(): boolean {
   return ctx !== null && ctx.state === "running";
 }
 
-/** 비프 한 번. 오디오가 아직 켜지지 않았으면 아무것도 하지 않고 false. */
-export function playBeep(kind: BeepKind): boolean {
+/**
+ * 비프 한 번. 오디오가 아직 켜지지 않았으면 아무것도 하지 않고 false.
+ * delaySec를 주면 그만큼 뒤에 정확히 울리도록 예약한다(기본 0 = 지금).
+ */
+export function playBeep(kind: BeepKind, delaySec = 0): boolean {
   if (!ctx || !beeper) return false;
   try {
-    return beeper(kind);
+    return beeper(kind, ctx.currentTime + delaySec);
   } catch {
     return false;
   }
