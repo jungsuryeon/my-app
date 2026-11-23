@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import {
-  BODY_PARTS,
   EQUIPMENTS,
+  REGIONS,
+  REGION_PARTS,
   makeTempRoutine,
+  regionOf,
   searchCatalog,
   type BodyPart,
   type CatalogExercise,
   type Equipment,
+  type Region,
 } from "@/lib/exerciseCatalog";
 import type { Routine } from "@/lib/routines";
 
@@ -82,6 +85,7 @@ function GifView({ item }: { item: CatalogExercise }) {
 // 운동 찾기: 한국어 운동 목록에서 찾고, 고른 운동의 동작 GIF를 보고, 그 운동으로 바로 시작한다.
 export default function ExerciseSearch({ onBack, onStart }: Props) {
   const [query, setQuery] = useState("");
+  const [region, setRegion] = useState<Region | null>(null);
   const [bodyPart, setBodyPart] = useState<BodyPart | null>(null);
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [selected, setSelected] = useState<CatalogExercise | null>(null);
@@ -101,7 +105,7 @@ export default function ExerciseSearch({ onBack, onStart }: Props) {
           <h1 className="text-2xl font-bold">{selected.name}</h1>
         </header>
         <p className="text-sm text-muted">
-          {selected.bodyPart} · {selected.equipment}
+          {regionOf(selected)} · {selected.bodyPart} · {selected.equipment}
         </p>
         <GifView item={selected} />
         <button
@@ -115,7 +119,7 @@ export default function ExerciseSearch({ onBack, onStart }: Props) {
     );
   }
 
-  const results = searchCatalog({ query, bodyPart, equipment });
+  const results = searchCatalog({ query, region, bodyPart, equipment });
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
@@ -146,18 +150,36 @@ export default function ExerciseSearch({ onBack, onStart }: Props) {
 
       <div className="flex flex-col gap-2" role="group" aria-label="조건">
         <div className="flex flex-wrap gap-2">
-          {BODY_PARTS.map((b) => (
+          {REGIONS.map((r) => (
             <button
-              key={b}
+              key={r}
               type="button"
-              aria-pressed={bodyPart === b}
-              onClick={() => setBodyPart(bodyPart === b ? null : b)}
-              className={`min-h-11 rounded-full px-4 text-sm ${bodyPart === b ? "bg-accent font-bold text-black" : "bg-white/10"}`}
+              aria-pressed={region === r}
+              onClick={() => {
+                setRegion(region === r ? null : r);
+                setBodyPart(null); // 큰 구분을 바꾸면 세부 부위는 처음으로
+              }}
+              className={`min-h-11 rounded-full px-5 text-base ${region === r ? "bg-accent font-bold text-black" : "bg-white/10"}`}
             >
-              {b}
+              {r}
             </button>
           ))}
         </div>
+        {region && (
+          <div className="flex flex-wrap gap-2" aria-label={`${region} 세부 부위`}>
+            {REGION_PARTS[region].map((b) => (
+              <button
+                key={b}
+                type="button"
+                aria-pressed={bodyPart === b}
+                onClick={() => setBodyPart(bodyPart === b ? null : b)}
+                className={`min-h-11 rounded-full px-4 text-sm ${bodyPart === b ? "bg-accent font-bold text-black" : "bg-white/10"}`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {EQUIPMENTS.map((q) => (
             <button
@@ -186,7 +208,7 @@ export default function ExerciseSearch({ onBack, onStart }: Props) {
             >
               <span className="text-lg font-bold">{c.name}</span>
               <span className="text-sm text-muted">
-                {c.bodyPart} · {c.equipment}
+                {regionOf(c)} · {c.bodyPart} · {c.equipment}
               </span>
             </button>
           ))

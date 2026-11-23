@@ -4,8 +4,17 @@
 
 import { DEFAULTS, type Exercise, type Routine } from "./routines";
 
-export type BodyPart = "등" | "가슴" | "어깨" | "하체";
+/** 큰 구분: 운동 찾기의 첫 번째 칩 */
+export type Region = "상체" | "하체";
+/** 세부 부위: 큰 구분을 고르면 나오는 두 번째 칩이자 운동 카드의 태그 */
+export type BodyPart = "등" | "가슴" | "어깨" | "허벅지" | "엉덩이";
 export type Equipment = "머신" | "케이블" | "바벨";
+
+/** 큰 구분별 세부 부위 */
+export const REGION_PARTS: Record<Region, readonly BodyPart[]> = {
+  상체: ["등", "가슴", "어깨"],
+  하체: ["허벅지", "엉덩이"],
+};
 
 export type CatalogExercise = {
   /** 앱 안의 운동 ID. 샘플 루틴의 운동 ID와 같다 */
@@ -22,7 +31,7 @@ export type CatalogExercise = {
   checked: string;
 };
 
-export const BODY_PARTS: readonly BodyPart[] = ["등", "가슴", "어깨", "하체"];
+export const REGIONS: readonly Region[] = ["상체", "하체"];
 export const EQUIPMENTS: readonly Equipment[] = ["머신", "케이블", "바벨"];
 
 /** 기존 샘플 운동 7개. 이름·부위·기구는 직접 정했고, GIF는 이름·기구·부위·동작 화면을 보고 골랐다. */
@@ -58,7 +67,7 @@ export const CATALOG: readonly CatalogExercise[] = [
   {
     key: "leg-press",
     name: "레그프레스",
-    bodyPart: "하체",
+    bodyPart: "허벅지",
     equipment: "머신",
     aliases: ["레그 프레스", "legpress"],
     exerciseDbId: "2Qh2J1e", // Sled 45° Leg Press (sled machine · upper legs)
@@ -67,7 +76,7 @@ export const CATALOG: readonly CatalogExercise[] = [
   {
     key: "hip-abduction",
     name: "아웃타이",
-    bodyPart: "하체",
+    bodyPart: "엉덩이",
     equipment: "머신",
     aliases: ["힙어브덕션", "힙 어브덕션", "바깥쪽허벅지", "hipabduction", "아웃싸이"],
     exerciseDbId: "CHpahtl", // Machine Seated Hip Abduction (leverage machine · abductors)
@@ -76,7 +85,7 @@ export const CATALOG: readonly CatalogExercise[] = [
   {
     key: "hip-adduction",
     name: "인타이",
-    bodyPart: "하체",
+    bodyPart: "허벅지",
     equipment: "머신",
     aliases: ["힙어덕션", "힙 어덕션", "안쪽허벅지", "hipadduction", "인싸이"],
     exerciseDbId: "oHsrypV", // Machine Seated Hip Adduction (leverage machine · adductors)
@@ -85,7 +94,7 @@ export const CATALOG: readonly CatalogExercise[] = [
   {
     key: "squat",
     name: "스쿼트",
-    bodyPart: "하체",
+    bodyPart: "허벅지",
     equipment: "바벨",
     aliases: ["바벨스쿼트", "바벨 스쿼트", "squat"],
     exerciseDbId: "qXTaZnJ", // barbell full squat (barbell · upper legs)
@@ -102,8 +111,16 @@ export function normalize(text: string): string {
   return text.toLowerCase().replace(/[\s\-_.·]/g, "");
 }
 
+/** 운동이 속한 큰 구분(세부 부위로 정해진다) */
+export function regionOf(c: CatalogExercise): Region {
+  return (REGIONS.find((r) => REGION_PARTS[r].includes(c.bodyPart)) ?? "상체") as Region;
+}
+
 export type SearchFilter = {
   query?: string;
+  /** 상체/하체 */
+  region?: Region | null;
+  /** 세부 부위(등·가슴·어깨·허벅지·엉덩이) */
   bodyPart?: BodyPart | null;
   equipment?: Equipment | null;
 };
@@ -115,10 +132,11 @@ export type SearchFilter = {
 export function searchCatalog(filter: SearchFilter = {}): CatalogExercise[] {
   const q = normalize(filter.query ?? "");
   return CATALOG.filter((c) => {
+    if (filter.region && regionOf(c) !== filter.region) return false;
     if (filter.bodyPart && c.bodyPart !== filter.bodyPart) return false;
     if (filter.equipment && c.equipment !== filter.equipment) return false;
     if (q === "") return true;
-    return [c.name, c.bodyPart, c.equipment, ...c.aliases].some((t) => normalize(t).includes(q));
+    return [c.name, regionOf(c), c.bodyPart, c.equipment, ...c.aliases].some((t) => normalize(t).includes(q));
   });
 }
 
