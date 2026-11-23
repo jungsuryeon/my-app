@@ -10,13 +10,14 @@ import {
   skipSet,
   startSession,
   tick,
+  updateExercise,
   type Session,
 } from "./session";
 
 // 운동 A: 2세트 × 3회, 템포 1초, 휴식 2초 / 운동 B: 1세트 × 2회, 템포 1초, 휴식 5초
 const routine = [
-  { sets: 2, reps: 3, tempoSec: 1, restSec: 2 },
-  { sets: 1, reps: 2, tempoSec: 1, restSec: 5 },
+  { id: "a", name: "운동A", sets: 2, reps: 3, tempoSec: 1, restSec: 2, weightKg: null },
+  { id: "b", name: "운동B", sets: 1, reps: 2, tempoSec: 1, restSec: 5, weightKg: null },
 ];
 
 /** 시각을 step씩 앞으로 보내며 tick을 부른다 */
@@ -169,6 +170,27 @@ describe("세트 건너뛰기", () => {
   it("휴식·카운트다운 중에는 건너뛸 수 없다", () => {
     const s = startSession(createSession(routine), 0);
     expect(skipSet(s, 1000)).toBe(s);
+  });
+});
+
+describe("다음 운동 값 수정", () => {
+  it("운동 사이 준비 화면에서 고친 값(세트 수·반복·휴식·템포)이 다음 운동에 반영된다", () => {
+    let s = startSession(createSession(routine), 0);
+    s = run(s, 0, 11_000); // 운동 A 끝 → B 준비
+    s = updateExercise(s, 1, { reps: 4, sets: 2, restSec: 3, tempoSec: 2 });
+    expect(s.machine.sets[1]).toHaveLength(2);
+    expect(s.machine.sets[1][0]).toMatchObject({ status: "pending", targetReps: 4 });
+    s = startSession(s, 20_000);
+    s = run(s, 20_000, 34_000); // 카운트다운3 + 4회×2초 = 8초 + 휴식 3초 → 둘째 세트 운동
+    expect(s.machine.phase).toBe("EXERCISE");
+    expect(s.machine.setIndex).toBe(1);
+  });
+
+  it("준비 화면이 아니거나 다른 운동이면 바꾸지 않는다", () => {
+    const s = createSession(routine);
+    expect(updateExercise(s, 1, { reps: 9, sets: 9, restSec: 9, tempoSec: 9 })).toBe(s);
+    const running = startSession(s, 0);
+    expect(updateExercise(running, 0, { reps: 9, sets: 9, restSec: 9, tempoSec: 9 })).toBe(running);
   });
 });
 

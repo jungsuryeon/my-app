@@ -9,8 +9,8 @@ import {
   createMachine,
   type ActivePhase,
   type Machine,
-  type MachineExercise,
 } from "./machine";
+import type { Exercise } from "./routines";
 import {
   COUNTDOWN_MS,
   createClock,
@@ -27,11 +27,8 @@ import {
   type Clock,
 } from "./timer";
 
-/** 세션에 필요한 운동 설정 */
-export type SessionExercise = MachineExercise & {
-  tempoSec: number; // 반복 1회당 시간(초)
-  restSec: number; // 세트 사이 휴식(초)
-};
+/** 세션이 쓰는 운동 설정 = 루틴의 운동(이름·반복·세트·휴식·템포·무게) 그대로 */
+export type SessionExercise = Exercise;
 
 export type Session = {
   machine: Machine;
@@ -49,6 +46,29 @@ export function createSession(exercises: SessionExercise[]): Session {
     clock: createClock(),
     activeMs: 0,
   };
+}
+
+/**
+ * 운동 사이 준비 화면(READY)에서 다음 운동의 값을 고쳤을 때 반영한다.
+ * 그 운동의 세트 기록을 새 값(세트 수·목표 반복)으로 다시 만든다. 준비 화면이 아니거나 다른 운동이면 그대로.
+ */
+export function updateExercise(
+  s: Session,
+  index: number,
+  values: Pick<SessionExercise, "reps" | "sets" | "restSec" | "tempoSec">,
+): Session {
+  if (s.machine.phase !== "READY" || s.machine.exerciseIndex !== index) return s;
+  const exercises = s.exercises.map((e, i) => (i === index ? { ...e, ...values } : e));
+  const sets = s.machine.sets.map((row, i) =>
+    i !== index
+      ? row
+      : Array.from({ length: values.sets }, () => ({
+          status: "pending" as const,
+          targetReps: values.reps,
+          reps: 0,
+        })),
+  );
+  return { ...s, exercises, machine: { ...s.machine, sets } };
 }
 
 // ───────────────────────── 보조 계산 ─────────────────────────
