@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import type { SaveResult } from "@/lib/records";
 import { completedSetCount, totalSetCount, type SetStatus } from "@/lib/machine";
 import { EDIT_REPS_MAX, EDIT_REPS_MIN, activeTotalMs, type Session } from "@/lib/session";
 
@@ -7,7 +9,11 @@ type Props = {
   session: Session;
   /** 세트 하나의 반복 수를 고쳤을 때 */
   onEditReps: (exerciseIndex: number, setIndex: number, reps: number) => void;
-  /** ⚠ 임시: 저장(작업 20)이 생기기 전까지 나가는 길로만 둔다 */
+  /** 기록 저장. 연속 클릭으로 무시되면 null */
+  onSave: () => SaveResult | null;
+  /** 저장에 성공한 뒤(홈으로 돌아가며 안내를 보여 준다) */
+  onSaved: () => void;
+  /** 저장 안 하고 버리기를 확인했을 때, 또는 기록할 세트가 없을 때의 [홈으로] */
   onHome: () => void;
 };
 
@@ -28,7 +34,27 @@ function formatDuration(ms: number): string {
 
 // 종료 화면: 세트별 반복 수를 확인하고 고친다. 운동 중에는 고치지 않고 끝난 뒤에만 고칠 수 있다.
 // 고치지 않으면 자동으로 센 값(예상값)이 그대로 기록된다.
-export default function Finish({ session, onEditReps, onHome }: Props) {
+export default function Finish({ session, onEditReps, onSave, onSaved, onHome }: Props) {
+  // 저장 버튼은 한 번 누르면 비활성화한다. 실패하면 다시 눌러 같은 기록을 다시 저장할 수 있다.
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  function handleSave() {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    const result = onSave();
+    if (result === null) {
+      setSaving(false); // 연속 클릭으로 무시됨
+    } else if (result.ok) {
+      onSaved();
+    } else {
+      setError(result.message); // 조용히 넘기지 않고 알린다
+      setSaving(false);
+    }
+  }
+
   const m = session.machine;
   const done = completedSetCount(m);
   const total = totalSetCount(m);
@@ -122,17 +148,50 @@ export default function Finish({ session, onEditReps, onHome }: Props) {
         ))}
       </div>
 
-      {/* ⚠ 임시: 기록 저장·저장 안 하고 버리기 버튼은 작업 20에서 만든다 */}
-      <p className="rounded-2xl border border-dashed border-accent/40 p-3 text-sm text-muted">
-        임시 화면: 저장 버튼은 작업 20에서 만듭니다.
-      </p>
+      {error && (
+        <p role="alert" className="rounded-2xl bg-red-400/15 p-3 text-sm text-red-200">
+          {error}
+        </p>
+      )}
+
       <button
         type="button"
-        onClick={onHome}
-        className="min-h-11 rounded-xl bg-surface px-4 text-base"
+        onClick={handleSave}
+        disabled={saving}
+        className="min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-black disabled:opacity-40"
       >
-        홈으로
+        {error ? "다시 저장" : saving ? "저장하는 중…" : "기록 저장"}
       </button>
+
+      {confirmDiscard ? (
+        <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
+          <p className="text-sm">이 운동 기록이 삭제돼요. 저장하지 않고 나갈까요?</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmDiscard(false)}
+              className="min-h-11 rounded-xl bg-white/10 px-4"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={onHome}
+              className="min-h-11 rounded-xl bg-red-400/20 px-4 text-red-200"
+            >
+              버리기
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirmDiscard(true)}
+          className="min-h-11 rounded-xl px-4 text-base text-muted"
+        >
+          저장 안 하고 버리기
+        </button>
+      )}
     </main>
   );
 }

@@ -168,3 +168,161 @@ export function loadSnapshot(nowDate: number): RestoreResult {
 export function clearSnapshot(): void {
   removeItem(STORAGE_KEYS.snapshot);
 }
+
+// ───────────────────────── 운동 기록 저장 (PLAN 작업 20) ─────────────────────────
+
+export type RecordSetStatus = "완료" | "건너뜀" | "미수행";
+
+export type RecordSet = {
+  status: RecordSetStatus;
+  targetReps: number;
+  reps: number;
+};
+
+export type RecordExercise = {
+  name: string;
+  /** 무게(kg). 비워 둔 운동은 null → 화면에는 "-"로 보인다 */
+  weightKg: number | null;
+  sets: RecordSet[];
+};
+
+/** 저장되는 운동 기록 하나 */
+export type WorkoutRecord = {
+  /** 기록 ID. 같은 ID로 다시 저장하면 덮어쓰기만 한다(중복 기록 없음) */
+  id: string;
+  /** 날짜(Date.now() 값) */
+  date: number;
+  routineId: string;
+  routineName: string;
+  /** 활성 운동 시간(초). EXERCISE에서 실제로 흐른 시간의 합계 */
+  activeSec: number;
+  exercises: RecordExercise[];
+};
+
+const STATUS_TEXT: Record<SetRecord["status"], RecordSetStatus> = {
+  done: "완료",
+  skipped: "건너뜀",
+  notDone: "미수행",
+  pending: "미수행", // 종료 뒤에는 남아 있지 않지만, 혹시 있어도 하지 않은 세트로 기록한다
+};
+
+/** 종료된 세션에서 기록 하나를 만든다 */
+export function buildRecord(args: {
+  recordId: string;
+  routine: { id: string; name: string };
+  session: Session;
+  nowDate: number;
+}): WorkoutRecord {
+  const { session } = args;
+  return {
+    id: args.recordId,
+    date: args.nowDate,
+    routineId: args.routine.id,
+    routineName: args.routine.name,
+    activeSec: Math.round(session.activeMs / 1000),
+    exercises: session.exercises.map((ex, ei) => ({
+      name: ex.name,
+      weightKg: ex.weightKg,
+      sets: session.machine.sets[ei].map((s) => ({
+        status: STATUS_TEXT[s.status],
+        targetReps: s.targetReps,
+        reps: s.reps,
+      })),
+    })),
+  };
+}
+
+/** 완료한 세트 수 / 전체 세트 수 (홈의 최근 기록 한 줄에 쓴다) */
+export function countSets(rec: WorkoutRecord): { done: number; total: number } {
+  const all = rec.exercises.flatMap((e) => e.sets);
+  return { done: all.filter((s) => s.status === "완료").length, total: all.length };
+}
+
+function isRecordSet(v: unknown): v is RecordSet {
+  return (
+    isObject(v) &&
+    (v.status === "완료" || v.status === "건너뜀" || v.status === "미수행") &&
+    typeof v.targetReps === "number" &&
+    typeof v.reps === "number"
+  );
+}
+
+function isRecord(v: unknown): v is WorkoutRecord {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.date === "number" &&
+    typeof v.routineId === "string" &&
+    typeof v.routineName === "string" &&
+    typeof v.activeSec === "number" &&
+    Array.isArray(v.exercises) &&
+    v.exercises.every(
+      (e: unknown) =>
+        isObject(e) &&
+        typeof e.name === "string" &&
+        (e.weightKg === null || typeof e.weightKg === "number") &&
+        Array.isArray(e.sets) &&
+        e.sets.every(isRecordSet),
+    )
+  );
+}
+
+/** 저장된 기록 목록 모양인지 확인한다 */
+export function isRecordList(v: unknown): v is WorkoutRecord[] {
+  return Array.isArray(v) && v.every(isRecord);
+}
+
+export type SaveResult =
+  | { ok: true }
+  | {
+      ok: false;
+      /** corrupt = 기존 기록 목록이 손상돼 덮어쓰지 않음 / storage = 저장 공간 문제 */
+      reason: "corrupt" | "storage";
+      message: string;
+    };
+
+export const SAVE_MESSAGES = {
+  storage:
+    "저장하지 못했어요. 저장 공간이 부족하거나 브라우저 설정 때문일 수 있어요. 다시 저장해 보세요.",
+  corrupt:
+    "저장된 기록 목록이 손상돼 있어서 새 기록을 저장하지 않았어요(기존 기록을 덮어쓰지 않기 위해서예요). 홈의 데이터 초기화 뒤에 다시 시도해 주세요.",
+} as const;
+
+/**
+ * 기록 하나를 저장한다. 같은 ID가 있으면 그 기록을 덮어쓰고, 없으면 목록 끝에 더한다.
+ * - 기존 목록이 손상돼 있으면 덮어쓰지 않고 알린다(기록을 조용히 잃지 않기 위함).
+ * - 쓴 뒤 다시 읽어 실제로 들어갔는지 확인한다(실패를 조용히 넘기지 않기 위함).
+ * 화면이 그려진 뒤(이벤트 처리 안)에서만 부른다.
+ */
+export function saveRecord(rec: WorkoutRecord): SaveResult {
+  const fail = (reason: "corrupt" | "storage"): SaveResult => ({
+    ok: false,
+    reason,
+    message: SAVE_MESSAGES[reason],
+  });
+
+  const current = readItem<WorkoutRecord[]>(STORAGE_KEYS.records, isRecordList);
+  if (!current.ok) return fail("storage");
+  if (current.invalid) return fail("corrupt");
+
+  const list = current.value ?? [];
+  const next = list.some((r) => r.id === rec.id)
+    ? list.map((r) => (r.id === rec.id ? rec : r))
+    : [...list, rec];
+
+  if (!writeItem(STORAGE_KEYS.records, next).ok) return fail("storage");
+
+  const back = readItem<WorkoutRecord[]>(STORAGE_KEYS.records, isRecordList);
+  const saved = back.ok ? back.value?.find((r) => r.id === rec.id) : undefined;
+  if (!saved || JSON.stringify(saved) !== JSON.stringify(rec)) return fail("storage");
+  return { ok: true };
+}
+
+/** 저장된 기록 목록을 읽는다. 손상됐으면 invalid. */
+export function loadRecords():
+  | { ok: true; records: WorkoutRecord[]; invalid: boolean }
+  | { ok: false } {
+  const r = readItem<WorkoutRecord[]>(STORAGE_KEYS.records, isRecordList);
+  if (!r.ok) return { ok: false };
+  return { ok: true, records: r.value ?? [], invalid: r.invalid };
+}

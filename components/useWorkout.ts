@@ -33,7 +33,15 @@ import {
   watchVisibility,
   type WakeLockStatus,
 } from "@/lib/lifecycle";
-import { buildSnapshot, clearSnapshot, saveSnapshot, type RestoreResult } from "@/lib/records";
+import {
+  buildRecord,
+  buildSnapshot,
+  clearSnapshot,
+  saveRecord,
+  saveSnapshot,
+  type RestoreResult,
+  type SaveResult,
+} from "@/lib/records";
 import { createTicker, elapsedMs } from "@/lib/timer";
 
 /** 지금 상태에서 낼 안내 전체 */
@@ -223,6 +231,24 @@ export function useWorkout() {
     [commit],
   );
 
+  /**
+   * 종료 화면의 "기록 저장": 지금 세션을 기록 하나로 만들어 저장한다.
+   * 같은 기록 ID로는 덮어쓰기만 한다. 성공하면 호출하는 쪽이 홈으로 돌아가며 진행 상태를 지운다.
+   * 연속 클릭으로 무시됐으면 null.
+   */
+  const save = useCallback((): SaveResult | null => {
+    const result: { value: SaveResult | null } = { value: null };
+    guard.run("save", () => {
+      const s = sessionRef.current;
+      const meta = metaRef.current;
+      if (!s || !meta) return;
+      result.value = saveRecord(
+        buildRecord({ recordId: meta.recordId, routine: meta.routine, session: s, nowDate: Date.now() }),
+      );
+    });
+    return result.value;
+  }, [guard]);
+
   /** 확인창 "저장 후 종료": 종료를 확정한다(못 한 세트는 미수행). 종료 화면으로 간다 */
   const finish = useCallback(() => {
     const s = sessionRef.current;
@@ -342,5 +368,5 @@ export function useWorkout() {
     };
   }, [autoPause]);
 
-  return { session, nowMs, awayPaused, wakeLockStatus, snapshotFailed, restore, editReps, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
+  return { session, nowMs, awayPaused, wakeLockStatus, snapshotFailed, restore, editReps, save, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
 }

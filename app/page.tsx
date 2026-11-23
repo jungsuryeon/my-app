@@ -128,7 +128,18 @@ export default function Page() {
       }
 
       // COMPLETED: 종료 화면. 세트별 반복 수를 확인·수정한다(저장 버튼은 작업 20에서 만든다)
-      return <Finish session={session} onEditReps={workout.editReps} onHome={goHome} />;
+      return (
+        <Finish
+          session={session}
+          onEditReps={workout.editReps}
+          onSave={workout.save}
+          onSaved={() => {
+            goHome(); // 진행 상태를 지우고 홈으로
+            setNotice("기록을 저장했어요.");
+          }}
+          onHome={goHome}
+        />
+      );
     }
 
     // ── 첫 운동 준비 화면 ──
