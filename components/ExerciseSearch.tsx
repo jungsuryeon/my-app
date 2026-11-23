@@ -1,27 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MY_ROUTINE_LIMITS, createRoutine, exercisesFromKeys, moveItem } from "@/lib/myRoutines";
-import {
-  EQUIPMENTS,
-  REGIONS,
-  REGION_PARTS,
-  findCatalog,
-  makeTempRoutine,
-  regionOf,
-  searchCatalog,
-  type BodyPart,
-  type CatalogExercise,
-  type Equipment,
-  type Region,
-} from "@/lib/exerciseCatalog";
+import { MY_ROUTINE_LIMITS } from "@/lib/myRoutines";
+import { makeTempRoutine, regionOf, type CatalogExercise } from "@/lib/exerciseCatalog";
 import type { Routine } from "@/lib/routines";
+import ExerciseFilters, { EMPTY_FILTER, applyFilter, type ExerciseFilter } from "./ExerciseFilters";
 
 type Props = {
   /** "이 운동으로 시작": 만든 임시 루틴을 기존 준비 화면으로 넘긴다 */
   onStart: (routine: Routine) => void;
-  /** 내 루틴을 저장했을 때(홈으로 돌아가 안내를 보여 준다) */
-  onSaved: () => void;
+  /** 루틴에 담은 운동 key들(탭을 옮겨 다녀도 유지되도록 부모가 들고 있다) */
+  cart: string[];
+  onCartChange: (keys: string[]) => void;
+  /** "루틴 만들기": 담은 운동으로 루틴 편집 화면을 연다 */
+  onOpenEditor: () => void;
 };
 
 /** GIF 조회 결과. key로 어느 운동의 결과인지 구분한다(다른 운동으로 옮겨 가면 다시 조회) */
@@ -84,128 +76,12 @@ function GifView({ item }: { item: CatalogExercise }) {
   );
 }
 
-// 운동 찾기: 한국어 운동 목록에서 찾고, 고른 운동의 동작 GIF를 보고, 그 운동으로 바로 시작한다.
-export default function ExerciseSearch({ onStart, onSaved }: Props) {
-  // 루틴으로 저장할 담은 운동(key 순서 = 루틴 순서)
-  const [cart, setCart] = useState<string[]>([]);
-  const [building, setBuilding] = useState(false);
-  const [routineName, setRoutineName] = useState("");
-  const [buildError, setBuildError] = useState<string | null>(null);
-
-  const [query, setQuery] = useState("");
-  const [region, setRegion] = useState<Region | null>(null);
-  const [bodyPart, setBodyPart] = useState<BodyPart | null>(null);
-  const [equipment, setEquipment] = useState<Equipment | null>(null);
+// 운동 찾기 탭: 한국어 운동 목록에서 찾고, 고른 운동의 동작 GIF와 정보를 보고, 루틴에 담거나 그 운동으로 바로 시작한다.
+export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEditor }: Props) {
+  const [filter, setFilter] = useState<ExerciseFilter>(EMPTY_FILTER);
   const [selected, setSelected] = useState<CatalogExercise | null>(null);
 
   const full = cart.length >= MY_ROUTINE_LIMITS.exercisesPerRoutine;
-
-  function handleSave() {
-    const r = createRoutine(routineName, exercisesFromKeys(cart));
-    if (!r.ok) {
-      setBuildError(r.message);
-      return;
-    }
-    onSaved();
-  }
-
-  // ── 루틴 만들기: 담은 운동의 순서를 정하고 이름을 붙여 저장 ──
-  if (building) {
-    return (
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
-        <header className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setBuilding(false);
-              setBuildError(null);
-            }}
-            aria-label="운동 찾기로"
-            className="-ml-2 min-h-11 min-w-11 rounded-xl px-2 text-lg"
-          >
-            ←
-          </button>
-          <h1 className="text-2xl font-bold">내 루틴 만들기</h1>
-        </header>
-
-        <label htmlFor="routine-name" className="text-sm text-muted">
-          루틴 이름
-        </label>
-        <input
-          id="routine-name"
-          type="text"
-          autoComplete="off"
-          maxLength={MY_ROUTINE_LIMITS.nameMax * 2}
-          value={routineName}
-          onChange={(e) => setRoutineName(e.target.value)}
-          placeholder={`최대 ${MY_ROUTINE_LIMITS.nameMax}글자 (예: 가슴 데이)`}
-          className="min-h-11 rounded-xl bg-surface px-3 text-base outline-none focus:ring-2 focus:ring-accent"
-        />
-
-        <section aria-label="담은 운동" className="flex flex-col gap-2">
-          {cart.map((key, i) => {
-            const c = findCatalog(key);
-            if (!c) return null;
-            return (
-              <div key={key} className="flex items-center gap-1 rounded-2xl bg-surface pl-4">
-                <span className="flex-1 py-3">
-                  <span className="text-muted">{i + 1}. </span>
-                  <span className="font-bold">{c.name}</span>
-                </span>
-                <button
-                  type="button"
-                  aria-label={`${c.name} 위로`}
-                  disabled={i === 0}
-                  onClick={() => setCart(moveItem(cart, i, -1))}
-                  className="min-h-11 min-w-11 rounded-xl text-lg disabled:opacity-30"
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  aria-label={`${c.name} 아래로`}
-                  disabled={i === cart.length - 1}
-                  onClick={() => setCart(moveItem(cart, i, 1))}
-                  className="min-h-11 min-w-11 rounded-xl text-lg disabled:opacity-30"
-                >
-                  ▼
-                </button>
-                <button
-                  type="button"
-                  aria-label={`${c.name} 빼기`}
-                  onClick={() => {
-                    const next = cart.filter((k) => k !== key);
-                    setCart(next);
-                    if (next.length === 0) setBuilding(false);
-                  }}
-                  className="min-h-11 min-w-11 rounded-xl text-lg text-red-300"
-                >
-                  ✕
-                </button>
-              </div>
-            );
-          })}
-        </section>
-
-        <p className="text-sm text-muted">
-          운동마다 반복 15·세트 3·휴식 30초·템포 3초로 시작하고, 운동 전 준비 화면에서 바꿀 수 있어요. 이 루틴은 이
-          폰에만 저장돼요.
-        </p>
-        {buildError && (
-          <p role="alert" className="text-sm text-red-300">
-            {buildError}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={handleSave}
-          className="mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black"
-        >
-          루틴 저장
-        </button>
-      </main>
-    );
-  }
 
   if (selected) {
     const inCart = cart.includes(selected.key);
@@ -222,18 +98,29 @@ export default function ExerciseSearch({ onStart, onSaved }: Props) {
           </button>
           <h1 className="text-2xl font-bold">{selected.name}</h1>
         </header>
-        <p className="text-sm text-muted">
-          {regionOf(selected)} · {selected.bodyPart} · {selected.equipment}
-        </p>
+        <dl className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ["구분", regionOf(selected)],
+            ["부위", selected.bodyPart],
+            ["기구", selected.equipment],
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-2xl bg-surface px-2 py-3">
+              <dt className="text-xs text-muted">{k}</dt>
+              <dd className="mt-1 font-bold">{v}</dd>
+            </div>
+          ))}
+        </dl>
         <GifView item={selected} />
         <div className="mt-auto grid grid-cols-2 gap-3">
           <button
             type="button"
             disabled={!inCart && full}
-            onClick={() => setCart(inCart ? cart.filter((k) => k !== selected.key) : [...cart, selected.key])}
+            onClick={() =>
+              onCartChange(inCart ? cart.filter((k) => k !== selected.key) : [...cart, selected.key])
+            }
             className="min-h-14 rounded-2xl bg-white/10 px-4 text-lg font-bold disabled:opacity-40"
           >
-            {inCart ? "담김 ✓ 빼기" : "루틴에 담기"}
+            {inCart ? "담김 ✓ 빼기" : "루틴에 추가"}
           </button>
           <button
             type="button"
@@ -252,7 +139,7 @@ export default function ExerciseSearch({ onStart, onSaved }: Props) {
     );
   }
 
-  const results = searchCatalog({ query, region, bodyPart, equipment });
+  const results = applyFilter(filter);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
@@ -260,65 +147,7 @@ export default function ExerciseSearch({ onStart, onSaved }: Props) {
         <h1 className="text-2xl font-bold">운동 찾기</h1>
       </header>
 
-      <label htmlFor="exercise-query" className="sr-only">
-        운동 이름
-      </label>
-      <input
-        id="exercise-query"
-        type="search"
-        autoComplete="off"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="운동 이름 (예: 체스트프레스)"
-        className="min-h-11 rounded-xl bg-surface px-3 text-base outline-none focus:ring-2 focus:ring-accent"
-      />
-
-      <div className="flex flex-col gap-2" role="group" aria-label="조건">
-        <div className="flex flex-wrap gap-2">
-          {REGIONS.map((r) => (
-            <button
-              key={r}
-              type="button"
-              aria-pressed={region === r}
-              onClick={() => {
-                setRegion(region === r ? null : r);
-                setBodyPart(null); // 큰 구분을 바꾸면 세부 부위는 처음으로
-              }}
-              className={`min-h-11 rounded-full px-5 text-base ${region === r ? "bg-accent font-bold text-black" : "bg-white/10"}`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-        {region && (
-          <div className="flex flex-wrap gap-2" aria-label={`${region} 세부 부위`}>
-            {REGION_PARTS[region].map((b) => (
-              <button
-                key={b}
-                type="button"
-                aria-pressed={bodyPart === b}
-                onClick={() => setBodyPart(bodyPart === b ? null : b)}
-                className={`min-h-11 rounded-full px-4 text-sm ${bodyPart === b ? "bg-accent font-bold text-black" : "bg-white/10"}`}
-              >
-                {b}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {EQUIPMENTS.map((q) => (
-            <button
-              key={q}
-              type="button"
-              aria-pressed={equipment === q}
-              onClick={() => setEquipment(equipment === q ? null : q)}
-              className={`min-h-11 rounded-full px-4 text-sm ${equipment === q ? "bg-accent font-bold text-black" : "bg-white/10"}`}
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ExerciseFilters value={filter} onChange={setFilter} />
 
       <section aria-label="검색 결과" className="flex flex-col gap-2">
         {results.length === 0 ? (
@@ -331,7 +160,10 @@ export default function ExerciseSearch({ onStart, onSaved }: Props) {
               onClick={() => setSelected(c)}
               className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70"
             >
-              <span className="text-lg font-bold">{c.name}</span>
+              <span className="text-lg font-bold">
+                {c.name}
+                {cart.includes(c.key) && <span className="ml-2 text-sm text-accent">담김</span>}
+              </span>
               <span className="text-sm text-muted">
                 {regionOf(c)} · {c.bodyPart} · {c.equipment}
               </span>
@@ -343,7 +175,7 @@ export default function ExerciseSearch({ onStart, onSaved }: Props) {
       {cart.length > 0 && (
         <button
           type="button"
-          onClick={() => setBuilding(true)}
+          onClick={onOpenEditor}
           className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black shadow-lg"
         >
           담은 운동 {cart.length}개 · 루틴 만들기

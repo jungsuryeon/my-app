@@ -9,7 +9,9 @@ import {
   isRoutineList,
   loadMyRoutines,
   moveItem,
+  checkRoutineInput,
   renameRoutine,
+  updateRoutine,
   validateRoutineName,
 } from "./myRoutines";
 
@@ -114,6 +116,54 @@ describe("저장·불러오기·이름 변경·삭제", () => {
     const again = deleteRoutine(id);
     expect(!again.ok && again.reason).toBe("missing");
     expect(renameRoutine("my-없음", "x").ok).toBe(false);
+  });
+
+  it("수정: 이름·운동 구성·순서·값이 바뀌고 다른 루틴은 그대로, 읽어 보면 같다", () => {
+    createRoutine("a", exs());
+    const made = createRoutine("b", exs());
+    const id = made.ok ? made.routines[1].id : "";
+    const next = exercisesFromKeys(["lat-pulldown", "squat", "chest-press"]).map((e, i) => ({
+      ...e,
+      reps: 10 + i,
+      sets: 4,
+      restSec: 45,
+      tempoSec: 2.5,
+      weightKg: i === 0 ? 20.5 : null,
+    }));
+    const r = updateRoutine(id, "  새 루틴 ", next);
+    expect(r.ok).toBe(true);
+    const l = loadMyRoutines();
+    const all = l.ok ? l.routines : [];
+    expect(all.map((x) => x.name)).toEqual(["a", "새 루틴"]);
+    expect(all[1].id).toBe(id);
+    expect(all[1].exercises.map((e) => e.id)).toEqual(["lat-pulldown", "squat", "chest-press"]);
+    expect(all[1].exercises[0]).toMatchObject({ reps: 10, sets: 4, restSec: 45, tempoSec: 2.5, weightKg: 20.5 });
+    expect(all[0].exercises.map((e) => e.id)).toEqual(["chest-press", "squat"]);
+  });
+
+  it("수정: 없는 루틴·잘못된 값은 거절하고 저장된 것은 그대로", () => {
+    createRoutine("a", exs());
+    const l0 = loadMyRoutines();
+    const id = l0.ok ? l0.routines[0].id : "";
+    const missing = updateRoutine("my-없음", "x", exs());
+    expect(!missing.ok && missing.reason).toBe("missing");
+    const bad = exs();
+    bad[0].reps = 99; // 범위 밖(1~50)
+    const r = updateRoutine(id, "a", bad);
+    expect(!r.ok && r.reason).toBe("invalid");
+    expect(!r.ok && r.message).toContain("값");
+    const l = loadMyRoutines();
+    expect(l.ok && l.routines[0].exercises[0].reps).toBe(15);
+  });
+
+  it("검사: 휴식 5초·템포 0.5초·무게 0.3kg·세트 11개는 거절, 경계값은 허용", () => {
+    const base = exs();
+    const edge = base.map((e) => ({ ...e, reps: 50, sets: 10, restSec: 10, tempoSec: 1, weightKg: 0 }));
+    expect(checkRoutineInput("a", edge).ok).toBe(true);
+    expect(checkRoutineInput("a", base.map((e) => ({ ...e, restSec: 5 }))).ok).toBe(false);
+    expect(checkRoutineInput("a", base.map((e) => ({ ...e, tempoSec: 0.5 }))).ok).toBe(false);
+    expect(checkRoutineInput("a", base.map((e) => ({ ...e, weightKg: 0.3 }))).ok).toBe(false);
+    expect(checkRoutineInput("a", base.map((e) => ({ ...e, sets: 11 }))).ok).toBe(false);
   });
 
   it("저장 실패는 알리고 기존 목록은 그대로", () => {

@@ -2,7 +2,7 @@
 // 이 폰의 localStorage(`reptimer:routines`)에만 저장하고 서버로 보내지 않는다. 샘플 루틴 2개는 따로 고정이다.
 
 import { CATALOG, type CatalogExercise } from "./exerciseCatalog";
-import { DEFAULTS, type Exercise, type Routine } from "./routines";
+import { DEFAULTS, toInput, validateInput, type Exercise, type Routine } from "./routines";
 import { STORAGE_KEYS, readItem, writeItem } from "./storage";
 
 export const MY_ROUTINE_LIMITS = {
@@ -151,25 +151,44 @@ function update(change: (list: Routine[]) => Routine[] | RoutinesResult): Routin
   return { ok: true, routines: changed };
 }
 
-/** 새 루틴을 만든다. 이름·운동 개수 검사를 하고 한도(20개)를 넘으면 거절한다. */
-export function createRoutine(name: string, exercises: readonly Exercise[]): RoutinesResult {
+/** 이름·운동 개수·운동 값(반복·세트·휴식·템포·무게 범위)을 한꺼번에 검사한다 */
+export function checkRoutineInput(
+  name: string,
+  exercises: readonly Exercise[],
+): { ok: true; name: string } | { ok: false; error: string } {
   const v = validateRoutineName(name);
-  if (!v.ok) return { ok: false, reason: "invalid", message: v.error };
-  if (exercises.length === 0) {
-    return { ok: false, reason: "invalid", message: "운동을 하나 이상 담아 주세요." };
-  }
+  if (!v.ok) return v;
+  if (exercises.length === 0) return { ok: false, error: "운동을 하나 이상 담아 주세요." };
   if (exercises.length > MY_ROUTINE_LIMITS.exercisesPerRoutine) {
     return {
       ok: false,
-      reason: "invalid",
-      message: `한 루틴에는 운동을 ${MY_ROUTINE_LIMITS.exercisesPerRoutine}개까지 담을 수 있어요.`,
+      error: `한 루틴에는 운동을 ${MY_ROUTINE_LIMITS.exercisesPerRoutine}개까지 담을 수 있어요.`,
     };
   }
+  const bad = exercises.find((e) => validateInput(toInput(e)).values === null);
+  if (bad) return { ok: false, error: `${bad.name}의 반복·세트·휴식·템포·무게 값을 확인해 주세요.` };
+  return { ok: true, name: v.name };
+}
+
+/** 새 루틴을 만든다. 이름·운동·값 검사를 하고 한도(20개)를 넘으면 거절한다. */
+export function createRoutine(name: string, exercises: readonly Exercise[]): RoutinesResult {
+  const v = checkRoutineInput(name, exercises);
+  if (!v.ok) return { ok: false, reason: "invalid", message: v.error };
   return update((list) => {
     if (list.length >= MY_ROUTINE_LIMITS.routines) {
       return { ok: false, reason: "limit", message: ROUTINE_MESSAGES.limit };
     }
     return [...list, { id: newRoutineId(), name: v.name, exercises: exercises.map((e) => ({ ...e })) }];
+  });
+}
+
+/** 루틴을 수정한다(이름·운동 구성·순서·운동별 값). 없는 루틴이면 거절하고 다른 루틴은 건드리지 않는다. */
+export function updateRoutine(id: string, name: string, exercises: readonly Exercise[]): RoutinesResult {
+  const v = checkRoutineInput(name, exercises);
+  if (!v.ok) return { ok: false, reason: "invalid", message: v.error };
+  return update((list) => {
+    if (!list.some((r) => r.id === id)) return { ok: false, reason: "missing", message: ROUTINE_MESSAGES.missing };
+    return list.map((r) => (r.id === id ? { id, name: v.name, exercises: exercises.map((e) => ({ ...e })) } : r));
   });
 }
 

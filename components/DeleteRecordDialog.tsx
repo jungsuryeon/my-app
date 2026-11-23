@@ -9,6 +9,10 @@ type Props = {
   title?: string;
   /** 되돌릴 수 없다는 안내. 기본은 기록 문구 */
   note?: string;
+  /** 확인 버튼 글자. 기본 "삭제" */
+  confirmText?: string;
+  /** 취소 버튼 글자. 기본 "취소" */
+  cancelText?: string;
   /** 삭제 실패 안내. 없으면 보이지 않는다 */
   error: string | null;
   onCancel: () => void;
@@ -20,6 +24,8 @@ export default function DeleteRecordDialog({
   label,
   title = "이 기록을 삭제할까요?",
   note = "삭제한 기록은 되돌릴 수 없어요.",
+  confirmText = "삭제",
+  cancelText = "취소",
   error,
   onCancel,
   onConfirm,
@@ -62,14 +68,14 @@ export default function DeleteRecordDialog({
             onClick={onCancel}
             className="min-h-12 rounded-2xl bg-white/10 px-4 text-lg font-bold"
           >
-            취소
+            {cancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="min-h-12 rounded-2xl bg-red-400/25 px-4 text-lg font-bold text-red-200"
           >
-            삭제
+            {confirmText}
           </button>
         </div>
       </div>

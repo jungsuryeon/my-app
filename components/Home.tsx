@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { greeting, loadProfile, saveProfile, validateNickname, NICKNAME_MAX, type ProfileState } from "@/lib/profile";
 import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
-import { copyRoutine, deleteRoutine, loadMyRoutines, renameRoutine } from "@/lib/myRoutines";
+import { copyRoutine, deleteRoutine, loadMyRoutines } from "@/lib/myRoutines";
 import { SAMPLE_ROUTINES, cloneRoutine, type Routine } from "@/lib/routines";
 import { clearAll } from "@/lib/storage";
 import DeleteRecordDialog from "./DeleteRecordDialog";
-import RenameRoutineDialog from "./RenameRoutineDialog";
 import ResetDialog from "./ResetDialog";
 
 /** 최근 기록 칸에 보여 줄 내용 */
@@ -16,10 +15,14 @@ type Recent = { kind: "none" } | { kind: "line"; text: string } | { kind: "unrea
 type Props = {
   /** 루틴 카드를 누르면 그 루틴의 복사본으로 호출(시작 전 값 수정이 원본을 바꾸지 않도록) */
   onSelectRoutine: (routine: Routine) => void;
+  /** "루틴 만들기" 버튼 */
+  onCreateRoutine: () => void;
+  /** 내 루틴의 "수정" 버튼 */
+  onEditRoutine: (routine: Routine) => void;
 };
 
 // 홈 탭. 닉네임, 최근 기록, 기본 루틴, 내 루틴, 데이터 초기화를 보여 준다(캘린더·운동 찾기는 하단 탭으로 간다).
-export default function Home({ onSelectRoutine }: Props) {
+export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }: Props) {
   // 처음 그릴 때는 기록이 없는 것으로 두고(서버 화면과 같게), 그려진 뒤에 저장소에서 읽는다
   const [recent, setRecent] = useState<Recent>({ kind: "none" });
   // 닉네임 상태. null = 아직 읽기 전(입력 카드가 번쩍 보였다 사라지지 않게 읽기 전에는 아무것도 안 보인다)
@@ -30,8 +33,7 @@ export default function Home({ onSelectRoutine }: Props) {
   const [resetDialog, setResetDialog] = useState<string | null>(null);
   // 내 루틴. null = 읽기 전, "unreadable" = 읽을 수 없음
   const [myRoutines, setMyRoutines] = useState<Routine[] | "unreadable" | null>(null);
-  // 이름 바꾸기·삭제 창: 대상 루틴 id와 실패 안내
-  const [renaming, setRenaming] = useState<{ id: string; error: string | null } | null>(null);
+  // 삭제 확인창: 대상 루틴 id와 실패 안내
   const [deleting, setDeleting] = useState<{ id: string; error: string | null } | null>(null);
 
   useEffect(() => {
@@ -96,19 +98,7 @@ export default function Home({ onSelectRoutine }: Props) {
   }
 
   const mine = Array.isArray(myRoutines) ? myRoutines : [];
-  const renameTarget = renaming ? mine.find((r) => r.id === renaming.id) : undefined;
   const deleteTarget = deleting ? mine.find((r) => r.id === deleting.id) : undefined;
-
-  function handleRename(name: string) {
-    if (!renaming) return;
-    const r = renameRoutine(renaming.id, name);
-    if (!r.ok) {
-      setRenaming({ id: renaming.id, error: r.message });
-      return;
-    }
-    setMyRoutines(r.routines);
-    setRenaming(null);
-  }
 
   function handleDeleteRoutine() {
     if (!deleting) return;
@@ -228,12 +218,14 @@ export default function Home({ onSelectRoutine }: Props) {
         </p>
       )}
 
-      {mine.length > 0 && (
-        <section aria-labelledby="mine-title" className="flex flex-col gap-3">
-          <h2 id="mine-title" className="text-sm font-medium text-muted">
-            내 루틴
-          </h2>
-          {mine.map((r) => (
+      <section aria-labelledby="mine-title" className="flex flex-col gap-3">
+        <h2 id="mine-title" className="text-sm font-medium text-muted">
+          내 루틴
+        </h2>
+        {mine.length === 0 && myRoutines !== "unreadable" && (
+          <p className="text-sm text-muted">아직 만든 루틴이 없어요. 아래 버튼으로 나만의 루틴을 만들어 보세요.</p>
+        )}
+        {mine.map((r) => (
             <div key={r.id} className="flex items-stretch gap-1 rounded-2xl bg-surface">
               <button
                 type="button"
@@ -245,11 +237,11 @@ export default function Home({ onSelectRoutine }: Props) {
               </button>
               <button
                 type="button"
-                aria-label={`${r.name} 이름 바꾸기`}
-                onClick={() => setRenaming({ id: r.id, error: null })}
+                aria-label={`${r.name} 수정`}
+                onClick={() => onEditRoutine(copyRoutine(r))}
                 className="min-h-11 min-w-11 self-center rounded-xl px-2 text-sm text-muted underline"
               >
-                이름
+                수정
               </button>
               <button
                 type="button"
@@ -261,8 +253,14 @@ export default function Home({ onSelectRoutine }: Props) {
               </button>
             </div>
           ))}
-        </section>
-      )}
+        <button
+          type="button"
+          onClick={onCreateRoutine}
+          className="min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black"
+        >
+          + 루틴 만들기
+        </button>
+      </section>
 
       <button
         type="button"
@@ -271,15 +269,6 @@ export default function Home({ onSelectRoutine }: Props) {
       >
         데이터 초기화
       </button>
-
-      {renaming && renameTarget && (
-        <RenameRoutineDialog
-          initialName={renameTarget.name}
-          error={renaming.error}
-          onCancel={() => setRenaming(null)}
-          onConfirm={handleRename}
-        />
-      )}
 
       {deleting && deleteTarget && (
         <DeleteRecordDialog

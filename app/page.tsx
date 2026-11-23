@@ -8,7 +8,9 @@ import Finish from "@/components/Finish";
 import Home from "@/components/Home";
 import Progress from "@/components/Progress";
 import Ready from "@/components/Ready";
+import RoutineEditor, { type RoutineDraft } from "@/components/RoutineEditor";
 import TabBar, { TAB_BAR_PADDING, type Tab } from "@/components/TabBar";
+import { exercisesFromKeys } from "@/lib/myRoutines";
 import { useWorkout } from "@/components/useWorkout";
 import { loadSnapshot } from "@/lib/records";
 import type { Routine } from "@/lib/routines";
@@ -27,6 +29,10 @@ export default function Page() {
   const [notice, setNotice] = useState<string | null>(null);
   // 하단 탭에서 보고 있는 화면(운동을 준비·진행하는 동안에는 탭이 숨겨지고 이 값은 쓰이지 않는다)
   const [tab, setTab] = useState<Tab>("home");
+  // 운동 찾기에서 "루틴에 추가"로 담은 운동 key들(탭을 옮겨 다녀도 유지)
+  const [cart, setCart] = useState<string[]>([]);
+  // 루틴 만들기·수정 화면. 열려 있으면 값이 있다(이 동안 탭은 숨는다)
+  const [editor, setEditor] = useState<RoutineDraft | null>(null);
 
   // 화면이 그려진 뒤 한 번, 저장해 둔 진행 상태가 있으면 되살린다(localStorage는 여기서만 읽는다)
   const { restore } = workout;
@@ -173,14 +179,29 @@ export default function Page() {
       );
     }
 
+    // ── 루틴 만들기·수정 ──
+    if (editor) {
+      return (
+        <RoutineEditor
+          draft={editor}
+          onCancel={() => setEditor(null)}
+          onSaved={(message, wasNew) => {
+            setEditor(null);
+            if (wasNew) setCart([]); // 담아 둔 운동으로 루틴을 만들었으면 비운다
+            setTab("home");
+            setNotice(message);
+          }}
+        />
+      );
+    }
+
     // ── 탭 화면(홈·운동 찾기·운동 기록) ──
     if (tab === "search") {
       return (
         <ExerciseSearch
-          onSaved={() => {
-            setTab("home");
-            setNotice("내 루틴을 저장했어요.");
-          }}
+          cart={cart}
+          onCartChange={setCart}
+          onOpenEditor={() => setEditor({ id: null, name: "", exercises: exercisesFromKeys(cart) })}
           onStart={(routine) => {
             setNotice(null);
             setSelected(routine); // 임시 루틴: 저장하지 않고 기존 준비 화면·타이머로 연결
@@ -191,11 +212,17 @@ export default function Page() {
 
     if (tab === "records") return <Calendar />;
 
-    return <Home onSelectRoutine={(routine) => setSelected(routine)} />;
+    return (
+      <Home
+        onSelectRoutine={(routine) => setSelected(routine)}
+        onCreateRoutine={() => setEditor({ id: null, name: "", exercises: [] })}
+        onEditRoutine={(routine) => setEditor({ id: routine.id, name: routine.name, exercises: routine.exercises })}
+      />
+    );
   })();
 
   // 운동을 준비·진행하는 화면에서는 탭을 그리지 않는다
-  const showTabs = !session && !selected;
+  const showTabs = !session && !selected && !editor;
 
   return (
     <>
