@@ -20,8 +20,11 @@ export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 /** 실제로 저장되는 모양: { v: 버전, data: 값 } */
 type Envelope<T> = { v: number; data: T };
 
+// ok: true 일 때 value가 null이면 "쓸 수 있는 값이 없음"이다.
+// invalid가 true면 값이 저장돼 있었지만 깨졌거나 버전·모양이 달라 읽지 못한 것이므로,
+// 호출하는 쪽은 사용자에게 알리고 그 키를 덮어쓰지 않아야 한다(기록을 조용히 잃지 않기 위함).
 export type ReadResult<T> =
-  | { ok: true; value: T | null } // 값 없음·깨짐·버전 불일치는 value: null
+  | { ok: true; value: T | null; invalid: boolean }
   | { ok: false; error: string }; // 저장소에 접근할 수 없음
 
 export type WriteResult = { ok: true } | { ok: false; error: string };
@@ -45,7 +48,7 @@ export function readItem<T>(
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
   }
-  if (raw === null) return { ok: true, value: null };
+  if (raw === null) return { ok: true, value: null, invalid: false };
 
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -54,14 +57,16 @@ export function readItem<T>(
       parsed === null ||
       (parsed as Envelope<unknown>).v !== STORAGE_VERSION
     ) {
-      return { ok: true, value: null };
+      return { ok: true, value: null, invalid: true };
     }
     const data = (parsed as Envelope<unknown>).data;
-    if (validate && !validate(data)) return { ok: true, value: null };
-    return { ok: true, value: data as T };
+    if (validate && !validate(data)) {
+      return { ok: true, value: null, invalid: true };
+    }
+    return { ok: true, value: data as T, invalid: false };
   } catch {
-    // JSON이 깨진 경우: 읽을 수 없는 값은 없는 것으로 본다
-    return { ok: true, value: null };
+    // JSON이 깨진 경우: 쓸 수 있는 값은 없지만, 저장돼 있던 것이므로 invalid로 알린다
+    return { ok: true, value: null, invalid: true };
   }
 }
 
