@@ -31,11 +31,44 @@ export function createSoundEngine(deps: SoundDeps, options: SoundOptions = {}) {
   let voiceStartedAt: number | null = null;
   /** 오래된 음성의 끝남·오류 알림이 새 음성을 끝내지 않도록, 음성마다 번호를 매겨 확인한다 */
   let voiceToken = 0;
+  /** 재생 중인 음성이 반복 숫자인가(숫자는 다음 숫자가 와서 갈아치울 수 있다. 다른 음성은 끝까지 간다) */
+  let voiceIsCount = false;
 
   function stopVoice() {
     voiceToken++;
     voiceStartedAt = null;
+    voiceIsCount = false;
     deps.cancelSpeech();
+  }
+
+  /** 반복 숫자를 말한다. 못 말하거나 재생이 실패하면 반복 비프로 대체한다. */
+  function sayCount(cue: Cue, nowMs: number) {
+    const beepFallback = () => {
+      if (cue.kind) deps.beep(cue.kind);
+    };
+    const myToken = ++voiceToken;
+    const ok = deps.speak(cue.countVoice!, {
+      onEnd: () => {
+        if (myToken === voiceToken) {
+          voiceStartedAt = null;
+          voiceIsCount = false;
+        }
+      },
+      onError: () => {
+        if (myToken !== voiceToken) return;
+        voiceStartedAt = null;
+        voiceIsCount = false;
+        beepFallback();
+      },
+    });
+    if (ok) {
+      voiceStartedAt = nowMs;
+      voiceIsCount = true;
+    } else {
+      voiceStartedAt = null;
+      voiceIsCount = false;
+      beepFallback();
+    }
   }
 
   /** 음성 하나를 말한다. 못 말하거나 재생이 실패하면 비프로 대체한다. */
@@ -53,6 +86,7 @@ export function createSoundEngine(deps: SoundDeps, options: SoundOptions = {}) {
         fallback();
       },
     });
+    voiceIsCount = false;
     if (ok) {
       voiceStartedAt = nowMs;
     } else {
@@ -101,9 +135,21 @@ export function createSoundEngine(deps: SoundDeps, options: SoundOptions = {}) {
         }
       }
 
-      // 우선순위 3: 반복 비프. 음성이 재생되는 동안(또는 카운트다운이 나온 틱)에는 내지 않는다.
-      if (voiceStartedAt === null && countdowns.length === 0) {
-        reps.forEach((c) => deps.beep(c.kind!));
+      // 우선순위 3: 반복 안내. 카운트다운이 나온 틱에는 내지 않는다.
+      if (countdowns.length === 0 && reps.length > 0) {
+        // 세트 완료·시작 같은 음성이 재생되는 동안에는 내지 않는다(이전 반복 숫자는 갈아치운다)
+        const blocked = voiceStartedAt !== null && !voiceIsCount;
+        if (!blocked) {
+          const counted = reps.filter((c) => c.countVoice !== undefined);
+          if (counted.length > 0) {
+            // 한 틱에 여러 개가 겹쳐도 가장 최근 숫자 하나만 말한다
+            sayCount(counted[counted.length - 1], nowMs);
+          }
+          // 숫자 음성이 없는 반복 안내는 이전과 같이 비프. 음성이 재생 중이면 내지 않는다
+          if (voiceStartedAt === null) {
+            reps.filter((c) => c.countVoice === undefined).forEach((c) => deps.beep(c.kind!));
+          }
+        }
       }
     },
 

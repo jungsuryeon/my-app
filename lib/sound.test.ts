@@ -23,8 +23,11 @@ function fake(opts: { speakOk?: boolean } = {}) {
   return { deps, log, cb: () => last };
 }
 
+// 이 파일은 "숫자 음성이 없는" 반복 안내(비프 경로)의 규칙을 시험한다. 숫자 음성은 repVoice.test.ts에서 시험한다.
 const set = (reps = 3, restFollows = true) =>
-  setCues({ exerciseIndex: 0, setIndex: 0, reps, tempoSec: 1, finalPhrase: "세트 완료", restFollows });
+  setCues({ exerciseIndex: 0, setIndex: 0, reps, tempoSec: 1, finalPhrase: "세트 완료", restFollows }).map(
+    (c) => ({ ...c, countVoice: undefined }),
+  );
 
 describe("안내 만들기", () => {
   it("n번째 반복 비프는 n×템포초, 마지막 반복은 반복 비프 대신 세트 완료음+음성", () => {

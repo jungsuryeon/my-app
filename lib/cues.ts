@@ -14,6 +14,11 @@ export type Cue = {
   kind?: BeepKind;
   /** 말할 음성 문구. 없으면 비프만 */
   voice?: string;
+  /**
+   * 반복 숫자 음성("하나", "둘" …). 있으면 반복 비프 대신 이 숫자를 말하고, 음성을 쓸 수 없으면 kind 비프로 대체한다.
+   * 우선순위가 가장 낮아서 세트 완료·시작 음성이 재생 중이면 내지 않고, 이전 숫자가 재생 중이면 취소하고 새 숫자를 말한다.
+   */
+  countVoice?: string;
   /** 음성을 쓸 수 없을 때 비프로 대체하는 소리(세트 완료의 긴 비프는 kind로 이미 낸 뒤 이어서) */
   voiceFallback?: FallbackBeep[];
   /** 이 상태(운동·휴식·카운트다운)가 시작된 뒤의 시각(ms) */
@@ -68,6 +73,16 @@ export function exerciseDonePhrase(exerciseName: string, nextExerciseName: strin
   return `${exerciseName} 완료. 다음 운동은 ${nextExerciseName}입니다. 준비되면 시작을 누르세요.`;
 }
 
+const ONES = ["", "하나", "둘", "셋", "넷", "다섯", "여섯", "일곱", "여덟", "아홉"];
+const TENS = ["", "열", "스물", "서른", "마흔", "쉰"];
+
+/** 반복 숫자를 우리말 셈말로: 1→"하나", 11→"열하나", 20→"스물", 50→"쉰" (1~50) */
+export function countWord(n: number): string {
+  const t = Math.floor(n / 10);
+  const o = n % 10;
+  return `${TENS[t] ?? ""}${ONES[o]}` || String(n);
+}
+
 /** 소리가 나는 상황 */
 export type SoundEvent =
   | "start" // 운동 시작
@@ -78,12 +93,12 @@ export type SoundEvent =
   | "restCountdown"; // 휴식 마지막 3·2·1초
 
 /**
- * 혼합 모드(기본값): 반복은 비프음, 세트 완료와 휴식 시작은 음성이다.
+ * 혼합 모드(기본값): 반복은 숫자 음성(음성을 못 쓰면 비프), 세트 완료와 휴식 시작도 음성이다.
  * 휴식 종료는 별도 음성 없이 3·2·1 비프가 대신한다.
  */
 export const MIXED_MODE: Record<SoundEvent, "beep" | "voice"> = {
   start: "voice",
-  rep: "beep",
+  rep: "voice",
   setDone: "voice",
   exerciseDone: "voice",
   routineDone: "voice",
@@ -114,8 +129,8 @@ const REST_START_FALLBACK: FallbackBeep[] = [
 
 /**
  * 한 세트의 반복 안내를 만든다.
- * - n번째 반복 비프는 EXERCISE 시작 후 n×템포초에 낸다.
- * - 마지막 반복에는 반복 비프 대신 세트 완료음(긴 비프)과 음성을 낸다.
+ * - n번째 반복 안내(숫자 음성, 못 쓰면 비프)는 EXERCISE 시작 후 n×템포초에 낸다.
+ * - 마지막 반복에는 숫자 대신 세트 완료음(긴 비프)과 음성을 낸다.
  * @param finalPhrase 마지막 반복에서 말할 문구(세트 완료+휴식, 또는 운동 완료, 또는 루틴 완료)
  * @param restFollows 이어서 휴식이 있는가. 있으면 음성 실패 시 짧은 비프 2회로 휴식 시작을 알린다.
  */
@@ -132,7 +147,7 @@ export function setCues(p: {
     const id = `EXERCISE-${p.exerciseIndex}-${p.setIndex}-${n}`;
     const atMs = n * p.tempoSec * 1000;
     if (n < p.reps) {
-      cues.push({ id, kind: "rep", atMs });
+      cues.push({ id, kind: "rep", countVoice: countWord(n), atMs });
     } else {
       cues.push({
         id,
