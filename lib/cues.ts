@@ -42,3 +42,43 @@ export function dueCues(cues: Cue[], elapsedMs: number, emitted: ReadonlySet<str
     .filter((c) => c.atMs <= elapsedMs && !emitted.has(c.id))
     .sort((a, b) => a.atMs - b.atMs);
 }
+
+// ───────────────────────── 음성 문구와 혼합 모드 (PLAN 작업 10) ─────────────────────────
+
+/** 음성 문구 (PRD M2). 세트 완료와 휴식 시작은 한 문장으로 합쳐 한 번에 말한다. */
+export const PHRASES = {
+  start: "운동을 시작합니다.",
+  routineDone: "모든 운동을 완료했습니다.",
+} as const;
+
+/** 세트 완료 + 휴식 시작: "{n}번째 세트 완료. {휴식}초 휴식합니다." (n은 1부터) */
+export function setDonePhrase(setNumber: number, restSec: number): string {
+  return `${setNumber}번째 세트 완료. ${restSec}초 휴식합니다.`;
+}
+
+/** 운동의 마지막 세트 완료: 휴식 문구는 쓰지 않는다 */
+export function exerciseDonePhrase(exerciseName: string, nextExerciseName: string): string {
+  return `${exerciseName} 완료. 다음 운동은 ${nextExerciseName}입니다. 준비되면 시작을 누르세요.`;
+}
+
+/** 소리가 나는 상황 */
+export type SoundEvent =
+  | "start" // 운동 시작
+  | "rep" // 반복 하나
+  | "setDone" // 세트 완료(+ 휴식 시작)
+  | "exerciseDone" // 운동의 마지막 세트 완료
+  | "routineDone" // 루틴 완료
+  | "restCountdown"; // 휴식 마지막 3·2·1초
+
+/**
+ * 혼합 모드(기본값): 반복은 비프음, 세트 완료와 휴식 시작은 음성이다.
+ * 휴식 종료는 별도 음성 없이 3·2·1 비프가 대신한다.
+ */
+export const MIXED_MODE: Record<SoundEvent, "beep" | "voice"> = {
+  start: "voice",
+  rep: "beep",
+  setDone: "voice",
+  exerciseDone: "voice",
+  routineDone: "voice",
+  restCountdown: "beep",
+};

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { initAudio, playBeep } from "@/lib/audio";
+import { initAudio, playBeep, speakKorean } from "@/lib/audio";
+import { setDonePhrase } from "@/lib/cues";
 
 // 홈 화면 뼈대. 닉네임·최근 기록·루틴 카드·데이터 초기화는 이후 작업에서 채운다.
 export default function Home() {
@@ -65,6 +66,17 @@ export default function Home() {
           className="min-h-11 rounded-xl bg-surface px-4 text-base"
         >
           휴식 3·2·1 비프 듣기
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            // 한국어 음성이 없으면 말하지 못하므로(작업 11에서 비프로 대체) 결과를 화면에 알린다
+            const ok = speakKorean(setDonePhrase(1, 30));
+            setAudioMsg(ok ? "음성 재생 요청함" : "한국어 음성을 쓸 수 없어요(오디오 켜기를 먼저 누르세요)");
+          }}
+          className="min-h-11 rounded-xl bg-surface px-4 text-base"
+        >
+          음성 듣기 (1번째 세트 완료)
         </button>
         {audioMsg && <p className="text-sm text-muted">{audioMsg}</p>}
       </section>

@@ -100,6 +100,7 @@ export function initAudio(): boolean {
     src.buffer = silent;
     src.connect(ctx.destination);
     src.start(0);
+    initSpeech(); // 음성도 같은 탭 안에서 함께 켠다
     return true;
   } catch {
     return false;
@@ -121,5 +122,130 @@ export function playBeep(kind: BeepKind, delaySec = 0): boolean {
     return beeper(kind, ctx.currentTime + delaySec);
   } catch {
     return false;
+  }
+}
+
+// ───────────────────────── 한국어 음성 안내 (PLAN 작업 10) ─────────────────────────
+// 소리 우선순위·4초 제한·음성 실패 시 비프 대체는 작업 11에서 이어서 붙인다.
+
+export type VoiceLike = { lang: string; name: string; localService?: boolean };
+export type UtteranceLike = { lang: string; voice: unknown; rate: number; volume: number };
+export type SynthLike = {
+  getVoices: () => VoiceLike[];
+  speak: (u: never) => void;
+  cancel: () => void;
+  addEventListener: (type: string, cb: () => void) => void;
+  removeEventListener: (type: string, cb: () => void) => void;
+};
+
+/** 한국어 음성을 고른다. ko-KR 우선, 기기 안에 설치된 음성을 우선. 없으면 null. ("ko_KR" 같은 표기도 인정) */
+export function pickKoreanVoice<T extends VoiceLike>(voices: readonly T[]): T | null {
+  const ko = voices.filter((v) => /^ko([-_]|$)/i.test(v.lang));
+  if (ko.length === 0) return null;
+  const rank = (v: T) =>
+    (/^ko[-_]kr$/i.test(v.lang) ? 0 : 2) + (v.localService ? 0 : 1);
+  return [...ko].sort((a, b) => rank(a) - rank(b))[0];
+}
+
+/**
+ * 음성 목록이 채워질 때까지 기다린다. 브라우저는 목록을 늦게 채우므로(voiceschanged),
+ * 이미 있으면 바로, 없으면 변경 알림을 기다리고, timeoutMs가 지나도 안 오면 빈 목록으로 끝낸다.
+ */
+export function waitForVoices(synth: SynthLike, timeoutMs = 2000): Promise<VoiceLike[]> {
+  return new Promise((resolve) => {
+    const now = synth.getVoices();
+    if (now.length > 0) return resolve(now);
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      synth.removeEventListener("voiceschanged", onChange);
+      clearTimeout(timer);
+      resolve(synth.getVoices());
+    };
+    const onChange = () => {
+      if (synth.getVoices().length > 0) finish();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    synth.addEventListener("voiceschanged", onChange);
+  });
+}
+
+/** 음성 재생기. synth와 발화 객체 생성 함수를 받아 시험 때 가짜를 넣을 수 있다. */
+export function createSpeaker(deps: {
+  synth: SynthLike;
+  makeUtterance: (text: string) => UtteranceLike;
+}) {
+  let voice: VoiceLike | null = null;
+  return {
+    /** 음성 목록을 기다려 한국어 음성을 고른다. 한국어 음성이 있으면 true. */
+    async prepare(timeoutMs = 2000): Promise<boolean> {
+      voice = pickKoreanVoice(await waitForVoices(deps.synth, timeoutMs));
+      return voice !== null;
+    },
+    hasVoice(): boolean {
+      return voice !== null;
+    },
+    /** 말한다. 새 음성을 시작하기 전에는 항상 재생 중인 음성을 취소한다. 한국어 음성이 없으면 false(호출 쪽이 비프로 대체). */
+    speak(text: string, volume = 1): boolean {
+      if (!voice) return false;
+      deps.synth.cancel();
+      const u = deps.makeUtterance(text);
+      u.lang = "ko-KR";
+      u.voice = voice;
+      u.rate = 1;
+      u.volume = volume;
+      deps.synth.speak(u as never);
+      return true;
+    },
+    cancel(): void {
+      deps.synth.cancel();
+    },
+  };
+}
+
+let speaker: ReturnType<typeof createSpeaker> | null = null;
+
+/**
+ * 음성을 켠다. initAudio()와 같이 버튼 탭 안에서 불러야 한다.
+ * iPhone은 탭 안에서 한 번 말을 시켜야 이후 음성이 나므로, 들리지 않는 빈 발화로 먼저 깨운다.
+ * 한국어 음성 목록은 뒤에서 기다려 고른다.
+ */
+export function initSpeech(): boolean {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+  try {
+    const synth = window.speechSynthesis;
+    if (!speaker) {
+      speaker = createSpeaker({
+        synth: synth as unknown as SynthLike,
+        makeUtterance: (text) => new SpeechSynthesisUtterance(text) as unknown as UtteranceLike,
+      });
+      void speaker.prepare();
+    }
+    const unlock = new SpeechSynthesisUtterance(" ");
+    unlock.volume = 0;
+    synth.speak(unlock);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 한국어로 말한다. 음성을 못 켰거나 한국어 음성이 없으면 false. */
+export function speakKorean(text: string): boolean {
+  if (!speaker) return false;
+  try {
+    return speaker.speak(text);
+  } catch {
+    return false;
+  }
+}
+
+/** 재생 중인 음성을 취소한다 */
+export function cancelSpeech(): void {
+  try {
+    speaker?.cancel();
+  } catch {
+    // 취소 실패는 무시한다
   }
 }

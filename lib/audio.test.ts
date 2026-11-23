@@ -2,9 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   BEEP_SPECS,
   createBeeper,
+  createSpeaker,
+  pickKoreanVoice,
+  waitForVoices,
   type AudioContextLike,
   type GainLike,
   type OscillatorLike,
+  type SynthLike,
+  type UtteranceLike,
+  type VoiceLike,
 } from "./audio";
 
 /** 호출을 기록만 하는 가짜 오디오 */
@@ -95,5 +101,111 @@ describe("비프음", () => {
     const { ctx, oscs } = fakeCtx("closed");
     expect(createBeeper(ctx)("rep")).toBe(false);
     expect(oscs).toHaveLength(0);
+  });
+});
+
+describe("한국어 음성 고르기", () => {
+  const v = (lang: string, name: string, localService = true) => ({ lang, name, localService });
+
+  it("한국어 음성이 없으면 null", () => {
+    expect(pickKoreanVoice([v("en-US", "Samantha"), v("ja-JP", "Kyoko")])).toBeNull();
+    expect(pickKoreanVoice([])).toBeNull();
+  });
+
+  it("ko-KR을 우선하고 ko_KR 같은 표기도 인정한다", () => {
+    expect(pickKoreanVoice([v("en-US", "A"), v("ko-KR", "Yuna")])?.name).toBe("Yuna");
+    expect(pickKoreanVoice([v("ko_KR", "Android")])?.name).toBe("Android");
+  });
+
+  it("같은 한국어면 기기 안에 설치된 음성을 우선한다", () => {
+    expect(
+      pickKoreanVoice([v("ko-KR", "Online", false), v("ko-KR", "Local", true)])?.name,
+    ).toBe("Local");
+  });
+});
+
+/** 가짜 음성 합성기 */
+function fakeSynth(initial: VoiceLike[]) {
+  let voices = initial;
+  const listeners = new Set<() => void>();
+  const spoken: UtteranceLike[] = [];
+  let cancels = 0;
+  const synth: SynthLike = {
+    getVoices: () => voices,
+    speak: (u) => spoken.push(u as unknown as UtteranceLike),
+    cancel: () => {
+      cancels++;
+    },
+    addEventListener: (_t, cb) => listeners.add(cb),
+    removeEventListener: (_t, cb) => listeners.delete(cb),
+  };
+  return {
+    synth,
+    spoken,
+    cancelCount: () => cancels,
+    setVoices(v: VoiceLike[]) {
+      voices = v;
+      listeners.forEach((cb) => cb());
+    },
+    listenerCount: () => listeners.size,
+  };
+}
+const mk = (text: string) => ({ text, lang: "", voice: null, rate: 0, volume: 0 }) as UtteranceLike;
+
+describe("음성 목록 기다리기", () => {
+  it("이미 목록이 있으면 바로 돌려준다", async () => {
+    const f = fakeSynth([{ lang: "ko-KR", name: "Yuna" }]);
+    expect(await waitForVoices(f.synth)).toHaveLength(1);
+  });
+
+  it("목록이 늦게 채워지면 변경 알림을 받아 돌려준다", async () => {
+    const f = fakeSynth([]);
+    const p = waitForVoices(f.synth, 5000);
+    f.setVoices([{ lang: "ko-KR", name: "Yuna" }]);
+    expect(await p).toHaveLength(1);
+    expect(f.listenerCount()).toBe(0); // 기다림이 끝나면 알림 구독을 해제한다
+  });
+
+  it("끝내 안 채워지면 시간 제한 뒤 빈 목록으로 끝낸다", async () => {
+    const f = fakeSynth([]);
+    expect(await waitForVoices(f.synth, 20)).toEqual([]);
+    expect(f.listenerCount()).toBe(0);
+  });
+});
+
+describe("음성 재생기", () => {
+  it("한국어 음성이 준비되면 ko-KR로 말하고, 말하기 전에 항상 이전 음성을 취소한다", async () => {
+    const f = fakeSynth([{ lang: "ko-KR", name: "Yuna" }]);
+    const sp = createSpeaker({ synth: f.synth, makeUtterance: mk });
+    expect(await sp.prepare()).toBe(true);
+    expect(sp.speak("운동을 시작합니다.")).toBe(true);
+    expect(sp.speak("1번째 세트 완료. 30초 휴식합니다.")).toBe(true);
+    expect(f.cancelCount()).toBe(2); // 말할 때마다 먼저 취소
+    expect(f.spoken).toHaveLength(2);
+    expect(f.spoken[0].lang).toBe("ko-KR");
+    expect((f.spoken[0].voice as VoiceLike).name).toBe("Yuna");
+  });
+
+  it("한국어 음성이 없으면 말하지 않고 false(호출 쪽이 비프로 대체)", async () => {
+    const f = fakeSynth([{ lang: "en-US", name: "Samantha" }]);
+    const sp = createSpeaker({ synth: f.synth, makeUtterance: mk });
+    expect(await sp.prepare(10)).toBe(false);
+    expect(sp.speak("안녕")).toBe(false);
+    expect(f.spoken).toHaveLength(0);
+  });
+
+  it("준비 전에는 말하지 않는다", () => {
+    const f = fakeSynth([{ lang: "ko-KR", name: "Yuna" }]);
+    const sp = createSpeaker({ synth: f.synth, makeUtterance: mk });
+    expect(sp.hasVoice()).toBe(false);
+    expect(sp.speak("안녕")).toBe(false);
+  });
+
+  it("cancel은 재생 중인 음성을 취소한다", async () => {
+    const f = fakeSynth([{ lang: "ko-KR", name: "Yuna" }]);
+    const sp = createSpeaker({ synth: f.synth, makeUtterance: mk });
+    await sp.prepare();
+    sp.cancel();
+    expect(f.cancelCount()).toBe(1);
   });
 });
