@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cancelSpeech, playBeep, speakKorean } from "@/lib/audio";
+import { cancelSpeech, initAudio, playBeep, speakKorean } from "@/lib/audio";
 import {
   PHRASES,
   countdownCues,
@@ -160,10 +160,15 @@ export function useWorkout() {
     [commit, engine, guard],
   );
 
-  /** 이어하기: 멈췄던 상태로 돌아가 남은 시간부터 다시 센다 */
+  /**
+   * 이어하기: 멈췄던 상태로 돌아가 남은 시간부터 다시 센다.
+   * 새로고침으로 복원된 운동은 오디오가 꺼진 채 시작하므로(준비 화면을 거치지 않음),
+   * 이 버튼을 누른 탭 안에서 오디오를 켠다(iPhone 규칙). 이미 켜져 있으면 깨우기만 한다.
+   */
   const resume = useCallback(
     () =>
       void guard.run(PAUSE_TOGGLE, () => {
+        initAudio();
         const s = sessionRef.current;
         if (!s) return;
         const now = performance.now();
