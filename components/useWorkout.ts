@@ -27,6 +27,7 @@ import {
 } from "@/lib/session";
 import { createSoundEngine } from "@/lib/sound";
 import { keepAudioAlive, watchVisibility } from "@/lib/lifecycle";
+import { buildSnapshot, clearSnapshot, saveSnapshot, type RestoreResult } from "@/lib/records";
 import { createTicker, elapsedMs } from "@/lib/timer";
 
 /** 지금 상태에서 낼 안내 전체 */
@@ -58,6 +59,15 @@ function cuesFor(s: Session): Cue[] {
 // (실수로 두 번 눌러 멈췄다가 바로 이어지는 일을 막는다)
 const PAUSE_TOGGLE = "pause-toggle";
 
+/** 새 기록 ID. 같은 ID로 저장하면 덮어쓰기만 한다 */
+function newRecordId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+type Meta = { recordId: string; routine: { id: string; name: string } };
+
 const ACTIVE = ["COUNTDOWN", "EXERCISE", "REST"];
 
 /**
@@ -71,6 +81,10 @@ export function useWorkout() {
   // 화면 이탈·틱 끊김으로 자동 일시정지된 상태인가(안내 문구를 보여 주기 위함)
   const [awayPaused, setAwayPaused] = useState(false);
   const sessionRef = useRef<Session | null>(null);
+  // 스냅샷에 함께 남길 기록 ID와 루틴 이름
+  const metaRef = useRef<Meta | null>(null);
+  // 진행 상태를 저장하지 못했는가(새로고침하면 사라질 수 있다고 알리기 위함)
+  const [snapshotFailed, setSnapshotFailed] = useState(false);
   // 소리 엔진은 처음 한 번만 만들어 계속 쓴다(이미 낸 안내 ID 기록을 유지하기 위함)
   const [engine] = useState(() =>
     createSoundEngine({
@@ -90,8 +104,9 @@ export function useWorkout() {
 
   /** 첫 운동 "운동 시작" 탭: 새 세션을 만들고 바로 카운트다운을 시작한다 */
   const begin = useCallback(
-    (exercises: SessionExercise[]) =>
+    (exercises: SessionExercise[], routine: { id: string; name: string }) =>
       void guard.run("start", () => {
+        metaRef.current = { recordId: newRecordId(), routine };
         engine.reset();
         const now = performance.now();
         setNowMs(now);
@@ -215,10 +230,23 @@ export function useWorkout() {
     [commit, engine],
   );
 
+  /** 새로고침·재실행 후 저장해 둔 진행 상태를 되살린다(일시정지·준비 화면·종료 화면 중 하나로 시작) */
+  const restore = useCallback(
+    (r: Exclude<RestoreResult, { kind: "none" }>) => {
+      metaRef.current = { recordId: r.recordId, routine: r.routine };
+      engine.reset();
+      setAwayPaused(false);
+      commit(r.session);
+    },
+    [commit, engine],
+  );
+
   /** 세션을 버리고 홈으로 돌아갈 때 */
   const exit = useCallback(() => {
     engine.pause();
     setAwayPaused(false);
+    clearSnapshot(); // 저장해 둔 진행 상태도 지운다
+    metaRef.current = null;
     commit(null);
   }, [commit, engine]);
 
@@ -243,6 +271,30 @@ export function useWorkout() {
     return ticker.stop;
   }, [active, commit, engine, autoPause]);
 
+  // 1초마다 진행 상태를 저장한다. 어느 순간에 새로고침해도 이어갈 수 있도록 상태가 바뀔 때도 바로 저장한다.
+  const hasSession = session !== null;
+  useEffect(() => {
+    if (!hasSession) return;
+    function save() {
+      const s = sessionRef.current;
+      const meta = metaRef.current;
+      if (!s || !meta) return;
+      const ok = saveSnapshot(
+        buildSnapshot({
+          recordId: meta.recordId,
+          routine: meta.routine,
+          session: s,
+          nowMs: performance.now(),
+          nowDate: Date.now(),
+        }),
+      );
+      setSnapshotFailed(!ok);
+    }
+    save();
+    const id = setInterval(save, 1000);
+    return () => clearInterval(id);
+  }, [hasSession, session]);
+
   // 화면에서 벗어나면(다른 앱 이동·화면 잠금) 자동 일시정지, 돌아오면 끊긴 오디오를 다시 깨운다
   useEffect(() => {
     const stopWatch = watchVisibility({ onHidden: () => autoPause(performance.now()) });
@@ -253,5 +305,5 @@ export function useWorkout() {
     };
   }, [autoPause]);
 
-  return { session, nowMs, awayPaused, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
+  return { session, nowMs, awayPaused, snapshotFailed, restore, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
 }
