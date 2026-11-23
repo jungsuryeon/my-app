@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { regionOf } from "@/lib/exerciseCatalog";
+import { findCatalog, regionOf } from "@/lib/exerciseCatalog";
 import {
   MY_ROUTINE_LIMITS,
   checkRoutineInput,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/myRoutines";
 import { toInput, validateInput, type Exercise, type ExerciseInput, type FieldName } from "@/lib/routines";
 import DeleteRecordDialog from "./DeleteRecordDialog";
+import GifView from "./GifView";
 import ExerciseFilters, { EMPTY_FILTER, applyFilter, type ExerciseFilter } from "./ExerciseFilters";
 
 /** 편집을 시작할 때의 내용. id가 null이면 새 루틴 */
@@ -48,6 +49,8 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  // "동작 보기"로 펼친 칸(편집 중인 운동은 uid, 추가 목록은 "pick-key"). 펼칠 때만 GIF를 조회한다
+  const [viewing, setViewing] = useState<number | string | null>(null);
 
   const editing = draft.id !== null;
   const full = items.length >= MY_ROUTINE_LIMITS.exercisesPerRoutine;
@@ -106,21 +109,38 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
             <p className="text-base">맞는 운동이 없어요. 다른 이름이나 조건으로 찾아 보세요.</p>
           ) : (
             results.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => {
-                  const ex = exerciseFromCatalog(c);
-                  setItems((prev) => [...prev, { uid: nextUid.current++, exercise: ex, input: toInput(ex) }]);
-                  setPicking(false);
-                }}
-                className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface shadow-card px-4 py-3 text-left active:opacity-70"
-              >
-                <span className="text-lg font-bold">{c.name}</span>
-                <span className="text-sm text-muted">
-                  {regionOf(c)} · {c.bodyPart} · {c.equipment}
-                </span>
-              </button>
+              <div key={c.key} className="rounded-2xl bg-surface shadow-card">
+                <div className="flex items-stretch">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ex = exerciseFromCatalog(c);
+                      setItems((prev) => [...prev, { uid: nextUid.current++, exercise: ex, input: toInput(ex) }]);
+                      setPicking(false);
+                    }}
+                    className="flex min-h-16 min-w-0 flex-1 flex-col items-start justify-center rounded-2xl px-4 py-3 text-left active:opacity-70"
+                  >
+                    <span className="text-lg font-bold">{c.name}</span>
+                    <span className="text-sm text-muted">
+                      {regionOf(c)} · {c.bodyPart} · {c.equipment}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-expanded={viewing === `pick-${c.key}`}
+                    aria-label={`${c.name} 동작 보기`}
+                    onClick={() => setViewing(viewing === `pick-${c.key}` ? null : `pick-${c.key}`)}
+                    className="min-h-11 shrink-0 rounded-2xl px-4 text-sm text-accent-ink underline"
+                  >
+                    {viewing === `pick-${c.key}` ? "닫기" : "동작 보기"}
+                  </button>
+                </div>
+                {viewing === `pick-${c.key}` && (
+                  <div className="px-3 pb-3">
+                    <GifView item={c} />
+                  </div>
+                )}
+              </div>
             ))
           )}
         </section>
@@ -196,6 +216,20 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
                   ✕
                 </button>
               </div>
+              {findCatalog(it.exercise.id) && (
+                <div className="mt-1 pl-1">
+                  <button
+                    type="button"
+                    aria-expanded={viewing === it.uid}
+                    aria-label={`${it.exercise.name} 동작 보기`}
+                    onClick={() => setViewing(viewing === it.uid ? null : it.uid)}
+                    className="min-h-11 rounded-xl text-sm text-accent-ink underline"
+                  >
+                    {viewing === it.uid ? "동작 닫기" : "동작 보기"}
+                  </button>
+                  {viewing === it.uid && <GifView item={findCatalog(it.exercise.id)!} />}
+                </div>
+              )}
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {FIELDS.map((f) => {
                   const err = showErrors ? errors[f.name] : undefined;
