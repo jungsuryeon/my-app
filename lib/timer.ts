@@ -113,3 +113,68 @@ export function createTicker(
   };
   return ticker;
 }
+
+// ───────────────────────── 카운트다운과 반복 세기 (PLAN 작업 6) ─────────────────────────
+// 모두 "이 상태가 시작된 뒤 흐른 시간(elapsedMs)"만 받아 계산한다. 틱 횟수는 쓰지 않는다.
+
+/** 운동 시작 전 카운트다운 길이: 3초 */
+export const COUNTDOWN_MS = 3000;
+
+/** 카운트다운이 끝났는가 */
+export function isCountdownDone(elapsedMs: number): boolean {
+  return elapsedMs >= COUNTDOWN_MS;
+}
+
+/** 카운트다운 남은 시간(ms). 0 아래로 내려가지 않는다. */
+export function countdownRemainingMs(elapsedMs: number): number {
+  return Math.max(0, COUNTDOWN_MS - elapsedMs);
+}
+
+/** 화면에 보여 줄 카운트다운 숫자: 3 → 2 → 1 (끝나면 0). 남은 시간을 올림해서 센다. */
+export function countdownDisplay(elapsedMs: number): number {
+  return Math.ceil(countdownRemainingMs(elapsedMs) / 1000);
+}
+
+// 부동소수점 오차로 정확히 n×템포 시각에 한 개가 모자라 보이는 일을 막는 아주 작은 여유(ms)
+const EPS_MS = 1e-6;
+
+/** n번째 반복이 끝나는 시각(EXERCISE 시작 후 ms) = n × 템포. 이 시각에 n번째 비프를 낸다. */
+export function repTimeMs(n: number, tempoSec: number): number {
+  return n * tempoSec * 1000;
+}
+
+/** 지금까지 센 반복 수. 목표 횟수를 넘지 않는다. (n번째 반복은 EXERCISE 시작 후 n×템포초에 끝난 것으로 본다) */
+export function repsDone(elapsedMs: number, tempoSec: number, targetReps: number): number {
+  if (elapsedMs <= 0) return 0;
+  const n = Math.floor((elapsedMs + EPS_MS) / (tempoSec * 1000));
+  return Math.min(targetReps, n);
+}
+
+/** 목표 반복에 도달했는가(= 세트 완료) */
+export function isSetComplete(elapsedMs: number, tempoSec: number, targetReps: number): boolean {
+  return repsDone(elapsedMs, tempoSec, targetReps) >= targetReps;
+}
+
+/** 한 세트의 운동 시간(ms) = 목표 반복 × 템포 */
+export function setDurationMs(tempoSec: number, targetReps: number): number {
+  return repTimeMs(targetReps, tempoSec);
+}
+
+/** 운동 중 남은 시간(ms). 일시정지 때 이 값을 저장한다. */
+export function exerciseRemainingMs(
+  elapsedMs: number,
+  tempoSec: number,
+  targetReps: number,
+): number {
+  return Math.max(0, setDurationMs(tempoSec, targetReps) - elapsedMs);
+}
+
+/** 휴식 남은 시간(ms) */
+export function restRemainingMs(elapsedMs: number, restSec: number): number {
+  return Math.max(0, restSec * 1000 - elapsedMs);
+}
+
+/** 휴식이 끝났는가 */
+export function isRestDone(elapsedMs: number, restSec: number): boolean {
+  return elapsedMs >= restSec * 1000;
+}

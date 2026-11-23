@@ -1,8 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  countdownDisplay,
+  countdownRemainingMs,
   createClock,
   createTicker,
   elapsedMs,
+  exerciseRemainingMs,
+  isCountdownDone,
+  isRestDone,
+  isSetComplete,
+  repTimeMs,
+  repsDone,
+  restRemainingMs,
+  setDurationMs,
   startClock,
   stopClock,
   type Ticker,
@@ -150,5 +160,80 @@ describe("틱 (주기적 확인)", () => {
     expect(elapsedMs(clock, now())).toBe(30_000);
     clock = stopClock(clock, now());
     expect(elapsedMs(clock, now() + 10_000)).toBe(30_000);
+  });
+});
+
+describe("카운트다운", () => {
+  it("3초에서 시작해 1초씩 3 → 2 → 1 → 0으로 보인다", () => {
+    expect([0, 500, 999].map(countdownDisplay)).toEqual([3, 3, 3]);
+    expect([1000, 1500, 1999].map(countdownDisplay)).toEqual([2, 2, 2]);
+    expect([2000, 2999].map(countdownDisplay)).toEqual([1, 1]);
+    expect(countdownDisplay(3000)).toBe(0);
+  });
+
+  it("정확히 3초가 되면 끝나고, 그 전에는 끝나지 않는다", () => {
+    expect(isCountdownDone(2999)).toBe(false);
+    expect(isCountdownDone(3000)).toBe(true);
+    expect(countdownRemainingMs(1200)).toBe(1800);
+    expect(countdownRemainingMs(9999)).toBe(0);
+  });
+});
+
+describe("템포에 따른 반복 세기", () => {
+  it("n번째 반복은 n×템포초에 센다 (템포 3초)", () => {
+    expect(repsDone(2999, 3, 15)).toBe(0);
+    expect(repsDone(3000, 3, 15)).toBe(1);
+    expect(repsDone(5999, 3, 15)).toBe(1);
+    expect(repsDone(6000, 3, 15)).toBe(2);
+    expect(repTimeMs(15, 3)).toBe(45_000);
+  });
+
+  it("목표 횟수를 넘겨 세지 않는다", () => {
+    expect(repsDone(45_000, 3, 15)).toBe(15);
+    expect(repsDone(999_999, 3, 15)).toBe(15);
+  });
+
+  it("0 이하 시간은 0회", () => {
+    expect(repsDone(0, 3, 15)).toBe(0);
+    expect(repsDone(-10, 3, 15)).toBe(0);
+  });
+
+  it("소수 템포(0.1 단위)에서도 경계 시각에 정확히 센다", () => {
+    expect(repsDone(repTimeMs(7, 1.1), 1.1, 15)).toBe(7);
+    expect(repsDone(repTimeMs(3, 0.7), 0.7, 15)).toBe(3);
+  });
+
+  it("세트 완료는 목표 반복에 도달한 순간", () => {
+    expect(isSetComplete(44_999, 3, 15)).toBe(false);
+    expect(isSetComplete(45_000, 3, 15)).toBe(true);
+    expect(setDurationMs(3, 15)).toBe(45_000);
+  });
+
+  it("남은 시간(운동·휴식)이 0 아래로 내려가지 않는다", () => {
+    expect(exerciseRemainingMs(10_000, 3, 15)).toBe(35_000);
+    expect(exerciseRemainingMs(99_000, 3, 15)).toBe(0);
+    expect(restRemainingMs(10_000, 30)).toBe(20_000);
+    expect(restRemainingMs(40_000, 30)).toBe(0);
+    expect(isRestDone(29_999, 30)).toBe(false);
+    expect(isRestDone(30_000, 30)).toBe(true);
+  });
+
+  it("틱이 흔들려도(±60ms) 15회·템포 3초의 마지막 반복 감지 오차는 한 틱(250ms) 이내이고 누적되지 않는다", () => {
+    // 250ms 간격 틱에 지터를 섞어, 반복 수가 바뀌는 첫 틱 시각과 이상적인 시각(n×3000)의 차이를 잰다
+    let seed = 12345;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff) * 2 - 1;
+    let tNow = 0;
+    let prev = 0;
+    let worst = 0;
+    while (prev < 15) {
+      tNow += 250 + rand() * 60;
+      const n = repsDone(tNow, 3, 15);
+      if (n > prev) {
+        worst = Math.max(worst, tNow - repTimeMs(n, 3));
+        prev = n;
+      }
+    }
+    expect(worst).toBeGreaterThanOrEqual(0);
+    expect(worst).toBeLessThan(500); // PRD: 누적 오차 ±0.5초 이내
   });
 });
