@@ -11,13 +11,15 @@ type Props = {
   onPause: () => void;
   /** 이어하기 버튼 */
   onResume: () => void;
-  /** ⚠ 임시: 일시정지(작업 14)·전체 종료(작업 15) 버튼이 생기기 전까지 중단용으로만 둔다 */
-  onAbort: () => void;
+  /** 현재 세트 건너뛰기(운동 중에만 켜짐) */
+  onSkip: () => void;
+  /** 전체 종료(확인창을 띄운다) */
+  onEnd: () => void;
 };
 
 // 운동 진행 화면: COUNTDOWN / EXERCISE / REST 세 상태를 보여 준다.
 // 계산은 하지 않고 lib/의 결과만 보여 준다.
-export default function Progress({ session, nowMs, onPause, onResume, onAbort }: Props) {
+export default function Progress({ session, nowMs, onPause, onResume, onSkip, onEnd }: Props) {
   const m = session.machine;
   const ex = session.exercises[m.exerciseIndex];
   const el = elapsedMs(session.clock, nowMs);
@@ -95,31 +97,40 @@ export default function Progress({ session, nowMs, onPause, onResume, onAbort }:
         )}
       </div>
 
-      {paused ? (
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        {paused ? (
+          <button
+            type="button"
+            onClick={onResume}
+            className="min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-black"
+          >
+            이어하기
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onPause}
+            className="min-h-14 rounded-2xl bg-surface px-4 text-xl font-bold"
+          >
+            일시정지
+          </button>
+        )}
+        {/* 세트 건너뛰기는 운동 중(EXERCISE)에만 켠다. 카운트다운·휴식·일시정지 중에는 꺼 둔다 */}
         <button
           type="button"
-          onClick={onResume}
-          className="mb-3 min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-black"
+          onClick={onSkip}
+          disabled={m.phase !== "EXERCISE"}
+          className="min-h-14 rounded-2xl bg-surface px-4 text-xl font-bold disabled:cursor-not-allowed disabled:opacity-30"
         >
-          이어하기
+          건너뛰기
         </button>
-      ) : (
-        <button
-          type="button"
-          onClick={onPause}
-          className="mb-3 min-h-14 rounded-2xl bg-surface px-4 text-xl font-bold"
-        >
-          일시정지
-        </button>
-      )}
-
-      {/* ⚠ 임시 버튼(작업 14·15에서 일시정지·건너뛰기·전체 종료로 교체) */}
+      </div>
       <button
         type="button"
-        onClick={onAbort}
-        className="min-h-11 rounded-xl bg-surface px-4 text-base text-muted"
+        onClick={onEnd}
+        className="min-h-11 rounded-xl px-4 text-base text-muted"
       >
-        임시: 중단하고 홈으로
+        전체 종료
       </button>
     </main>
   );

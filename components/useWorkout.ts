@@ -15,8 +15,10 @@ import { isLastExercise, isLastSetOfExercise } from "@/lib/machine";
 import { createClickGuard } from "@/lib/clickGuard";
 import {
   createSession,
+  endSession,
   pauseSession,
   resumeSession,
+  skipSet,
   startSession,
   tick,
   updateExercise,
@@ -135,6 +137,62 @@ export function useWorkout() {
     [commit, guard],
   );
 
+  /** 현재 세트 건너뛰기(운동 중에만 동작). 휴식 없이 3초 카운트다운 후 다음 세트로 간다 */
+  const skip = useCallback(
+    () =>
+      void guard.run("skip", () => {
+        const s = sessionRef.current;
+        if (!s) return;
+        const now = performance.now();
+        engine.pause(); // 재생 중이던 음성은 끊는다
+        setNowMs(now);
+        commit(skipSet(s, now));
+      }),
+    [commit, engine, guard],
+  );
+
+  /**
+   * "전체 종료" 탭: 진행 중이면 먼저 일시정지한다(확인창이 떠 있는 동안 시간이 흐르지 않게).
+   * 돌려주는 값: 진행 중이었으면 true(계속하기 때 이어가야 함), 이미 멈춰 있거나 준비 화면이면 false,
+   * 연속 클릭으로 무시됐으면 null.
+   */
+  const requestEnd = useCallback((): boolean | null => {
+    const result: { value: boolean | null } = { value: null };
+    guard.run("end", () => {
+      const s = sessionRef.current;
+      if (!s) return;
+      const now = performance.now();
+      setNowMs(now);
+      const running = ACTIVE.includes(s.machine.phase);
+      if (running) {
+        engine.pause();
+        commit(pauseSession(s, now));
+      }
+      result.value = running;
+    });
+    return result.value;
+  }, [commit, engine, guard]);
+
+  /** 확인창 "계속하기": 누르기 전에 진행 중이었다면 멈췄던 상태로 되돌린다 */
+  const cancelEnd = useCallback(
+    (resumeRunning: boolean) => {
+      const s = sessionRef.current;
+      if (!s || !resumeRunning) return;
+      const now = performance.now();
+      setNowMs(now);
+      commit(resumeSession(s, now));
+    },
+    [commit],
+  );
+
+  /** 확인창 "저장 후 종료": 종료를 확정한다(못 한 세트는 미수행). 종료 화면으로 간다 */
+  const finish = useCallback(() => {
+    const s = sessionRef.current;
+    if (!s) return;
+    engine.pause();
+    commit(endSession(s));
+  }, [commit, engine]);
+
   /** 세션을 버리고 홈으로 돌아갈 때 */
   const exit = useCallback(() => {
     engine.pause();
@@ -158,5 +216,5 @@ export function useWorkout() {
     return ticker.stop;
   }, [active, commit, engine]);
 
-  return { session, nowMs, begin, startNext, pause, resume, exit };
+  return { session, nowMs, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
 }

@@ -17,8 +17,10 @@ export type ReadyValues = NonNullable<ReturnType<typeof validateInput>["values"]
 type Props = {
   routine: Routine;
   exerciseIndex: number;
-  /** 왼쪽 위 "←": 홈으로 */
+  /** 왼쪽 위 버튼. 첫 운동 준비 화면에서는 "←"(홈으로), 운동 사이 준비 화면에서는 "전체 종료" */
   onBack: () => void;
+  /** 왼쪽 위 버튼 글자. 기본은 "←" */
+  backLabel?: string;
   /** 입력 값이 모두 올바를 때 "운동 시작"을 누르면 호출 */
   onStart: (values: ReadyValues) => void;
 };
@@ -33,7 +35,7 @@ const FIELDS: { name: FieldName; label: string; unit: string; decimal?: boolean;
 
 // 운동 준비 화면(READY). 첫 운동과 운동 사이 준비 화면에서 같은 화면을 쓴다.
 // 부모가 운동이 바뀔 때 key를 바꿔 주면 입력칸이 그 운동의 값으로 새로 시작한다.
-export default function Ready({ routine, exerciseIndex, onBack, onStart }: Props) {
+export default function Ready({ routine, exerciseIndex, onBack, backLabel = "←", onStart }: Props) {
   const exercise: Exercise = routine.exercises[exerciseIndex];
   const [input, setInput] = useState<ExerciseInput>(() => toInput(exercise));
   const [audioMsg, setAudioMsg] = useState("");
@@ -58,10 +60,10 @@ export default function Ready({ routine, exerciseIndex, onBack, onStart }: Props
         <button
           type="button"
           onClick={onBack}
-          aria-label="홈으로"
+          aria-label={backLabel === "←" ? "홈으로" : backLabel}
           className="min-h-11 min-w-11 rounded-xl bg-surface px-3 text-lg"
         >
-          ←
+          {backLabel}
         </button>
         <p className="text-sm text-muted">
           {routine.name} · {exerciseIndex + 1}/{routine.exercises.length}
