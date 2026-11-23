@@ -7,6 +7,7 @@ import {
   countByDay,
   dayKey,
   formatClock,
+  monthStats,
   recordTime,
   recordsOnDay,
   shiftMonth,
@@ -48,6 +49,8 @@ export default function Calendar({ onBack }: Props) {
   const list = Array.isArray(records) ? records : [];
   const counts = countByDay(list);
   const cells = ym ? buildMonthGrid(ym.year, ym.month) : [];
+  // 보고 있는 달의 운동 일수·횟수. 삭제하면 records가 바뀌므로 바로 다시 계산된다
+  const stats = ym ? monthStats(list, ym.year, ym.month) : null;
   const dayRecords = selected ? recordsOnDay(list, selected) : [];
   const detail = detailId ? (list.find((r) => r.id === detailId) ?? null) : null;
 
@@ -156,6 +159,17 @@ export default function Calendar({ onBack }: Props) {
               </button>
             ),
           )}
+        </div>
+      </section>
+
+      <section aria-label="월간 통계" className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-surface p-4">
+          <p className="text-sm text-muted">운동한 날</p>
+          <p className="mt-1 text-2xl font-bold">{stats ? `${stats.days}일` : "-"}</p>
+        </div>
+        <div className="rounded-2xl bg-surface p-4">
+          <p className="text-sm text-muted">운동 횟수</p>
+          <p className="mt-1 text-2xl font-bold">{stats ? `${stats.count}회` : "-"}</p>
         </div>
       </section>
 
