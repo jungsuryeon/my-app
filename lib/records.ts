@@ -2,6 +2,7 @@
 // 운동 중에는 1초마다 지금 상태를 localStorage에 남기고, 새로고침·재실행 때 이어 갈 수 있게 한다.
 // (운동 기록 저장·최근 기록 조회는 작업 20·21에서 이 파일에 추가한다)
 
+import { sessionKcal } from "./calories";
 import type { Phase, SetRecord } from "./machine";
 import type { Exercise } from "./routines";
 import { createSession, endSession, pauseSession, type Session } from "./session";
@@ -208,6 +209,8 @@ export type WorkoutRecord = {
   routineName: string;
   /** 활성 운동 시간(초). EXERCISE에서 실제로 흐른 시간의 합계 */
   activeSec: number;
+  /** 예상 소모 칼로리(kcal, 참고용). 저장할 때 체중이 있었던 새 기록에만 있다 */
+  kcal?: number;
   exercises: RecordExercise[];
 };
 
@@ -225,12 +228,16 @@ export function buildRecord(args: {
   session: Session;
   nowDate: number;
   startedAt?: number;
+  /** 저장할 때의 체중(kg). 없으면 칼로리를 계산하지 않는다 */
+  bodyWeightKg?: number | null;
 }): WorkoutRecord {
   const { session } = args;
+  const kcal = sessionKcal(args.bodyWeightKg ?? null, session);
   return {
     id: args.recordId,
     date: args.nowDate,
     ...(args.startedAt !== undefined ? { startedAt: args.startedAt } : {}),
+    ...(kcal !== null ? { kcal } : {}),
     routineId: args.routine.id,
     routineName: args.routine.name,
     activeSec: Math.round(session.activeMs / 1000),
@@ -270,6 +277,7 @@ function isRecord(v: unknown): v is WorkoutRecord {
     typeof v.routineId === "string" &&
     typeof v.routineName === "string" &&
     typeof v.activeSec === "number" &&
+    (v.kcal === undefined || typeof v.kcal === "number") &&
     Array.isArray(v.exercises) &&
     v.exercises.every(
       (e: unknown) =>

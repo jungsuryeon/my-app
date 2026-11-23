@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { loadBody, weightOf, type BodyState } from "@/lib/body";
+import { sessionKcal } from "@/lib/calories";
 import type { SaveResult } from "@/lib/records";
 import { completedSetCount, totalSetCount, type SetStatus } from "@/lib/machine";
 import { EDIT_REPS_MAX, EDIT_REPS_MIN, activeTotalMs, type Session } from "@/lib/session";
@@ -39,6 +41,13 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // 칼로리 계산용 체중(PRD: localStorage는 화면이 그려진 뒤에 읽는다). null = 읽기 전
+  const [body, setBody] = useState<BodyState | null>(null);
+  useEffect(() => {
+    // 저장소 값을 한 번 상태로 옮기는 것이라 effect 안에서 상태를 바꿀 수밖에 없다
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBody(loadBody());
+  }, []);
 
   function handleSave() {
     if (saving) return;
@@ -59,6 +68,8 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
   const done = completedSetCount(m);
   const total = totalSetCount(m);
   const activeMs = activeTotalMs(session, 0);
+  // 체중이 있을 때만 계산한다(저장되는 값은 저장 시점의 체중으로 같은 식으로 다시 계산한다)
+  const kcal = sessionKcal(weightOf(body), session);
 
   // 완료한 세트가 하나도 없으면 기록할 것이 없다
   if (done === 0) {
@@ -88,6 +99,26 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
           반복 수는 설정한 템포로 센 예상값이에요. 실제와 다르면 고쳐 주세요.
         </p>
       </header>
+
+      {body !== null && (
+        <section aria-label="예상 소모 칼로리" className="rounded-2xl bg-surface p-4">
+          {kcal !== null ? (
+            <>
+              <p className="text-sm text-muted">예상 소모 칼로리</p>
+              <p className="mt-1 text-2xl font-bold">
+                약 {kcal} <span className="text-base font-normal text-muted">kcal</span>
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                체중과 운동·휴식 시간으로 계산한 참고용 추정값이에요. 의학적 조언이나 정확한 측정값이 아니에요.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted">
+              홈에서 체중(선택)을 입력하면 예상 소모 칼로리를 볼 수 있어요.
+            </p>
+          )}
+        </section>
+      )}
 
       <div className="flex flex-col gap-4">
         {session.exercises.map((ex, ei) => (

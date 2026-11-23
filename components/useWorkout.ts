@@ -42,6 +42,7 @@ import {
   type RestoreResult,
   type SaveResult,
 } from "@/lib/records";
+import { loadBody, weightOf } from "@/lib/body";
 import { createTicker, elapsedMs } from "@/lib/timer";
 
 /** 지금 상태에서 낼 안내 전체 */
@@ -249,6 +250,8 @@ export function useWorkout() {
           session: s,
           nowDate: Date.now(),
           startedAt: meta.startedAt,
+          // 저장 버튼을 누른 이벤트 안에서 체중을 읽는다(없으면 칼로리는 기록하지 않는다)
+          bodyWeightKg: weightOf(loadBody()),
         }),
       );
     });

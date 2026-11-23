@@ -25,6 +25,21 @@ describe("startedAt(선택 필드)", () => {
     expect(isRecordList([{ ...old, startedAt: "x" }])).toBe(false);
   });
 
+  it("체중이 있으면 기록에 kcal이 담기고, 없으면 필드가 없다(기존 기록과 호환)", () => {
+    const s = session();
+    const none = buildRecord({ recordId: "k0", routine, session: s, nowDate: T0 });
+    expect("kcal" in none).toBe(false);
+    // 활성 시간 10분, 완료한 세트 없음(휴식 0): 70kg × 3.5 × 600초 ÷ 3600 = 40.8 → 41
+    const ten = { ...s, activeMs: 600_000 };
+    const withW = buildRecord({ recordId: "k1", routine, session: ten, nowDate: T0, bodyWeightKg: 70 });
+    expect(withW.kcal).toBe(41);
+    const noWeight = buildRecord({ recordId: "k2", routine, session: ten, nowDate: T0, bodyWeightKg: null });
+    expect("kcal" in noWeight).toBe(false);
+    expect(isRecordList([none])).toBe(true);
+    expect(isRecordList([{ ...none, kcal: 55 }])).toBe(true);
+    expect(isRecordList([{ ...none, kcal: "x" }])).toBe(false);
+  });
+
   it("스냅샷에 담겨 새로고침 복원 뒤에도 유지되고, 없는 옛 스냅샷도 읽힌다", () => {
     const snap = buildSnapshot({ recordId: "s", routine, startedAt: T0, session: session(), nowMs: 0, nowDate: T0 });
     expect(isSnapshot(snap)).toBe(true);

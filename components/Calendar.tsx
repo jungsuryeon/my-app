@@ -149,16 +149,28 @@ export default function Calendar() {
         </div>
       </section>
 
-      <section aria-label="월간 통계" className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-surface p-4">
-          <p className="text-sm text-muted">운동한 날</p>
-          <p className="mt-1 text-2xl font-bold">{stats ? `${stats.days}일` : "-"}</p>
+      <section aria-label="월간 통계" className="grid grid-cols-3 gap-2">
+        <div className="rounded-2xl bg-surface p-3">
+          <p className="text-xs text-muted">운동한 날</p>
+          <p className="mt-1 text-xl font-bold">{stats ? `${stats.days}일` : "-"}</p>
         </div>
-        <div className="rounded-2xl bg-surface p-4">
-          <p className="text-sm text-muted">운동 횟수</p>
-          <p className="mt-1 text-2xl font-bold">{stats ? `${stats.count}회` : "-"}</p>
+        <div className="rounded-2xl bg-surface p-3">
+          <p className="text-xs text-muted">운동 횟수</p>
+          <p className="mt-1 text-xl font-bold">{stats ? `${stats.count}회` : "-"}</p>
+        </div>
+        <div className="rounded-2xl bg-surface p-3">
+          <p className="text-xs text-muted">예상 칼로리</p>
+          <p className="mt-1 text-xl font-bold">
+            {stats && stats.kcalCount > 0 ? `${stats.kcal.toLocaleString("ko-KR")}` : "-"}
+            {stats && stats.kcalCount > 0 && <span className="text-xs font-normal text-muted"> kcal</span>}
+          </p>
         </div>
       </section>
+      {stats && stats.kcalCount > 0 && stats.kcalCount < stats.count && (
+        <p className="-mt-2 text-xs text-muted">
+          칼로리는 체중을 입력한 상태로 저장한 운동 {stats.kcalCount}회만 합쳤어요. 참고용 추정값이에요.
+        </p>
+      )}
 
       <section aria-label="선택한 날의 기록" className="flex flex-col gap-2">
         {selected === null ? (

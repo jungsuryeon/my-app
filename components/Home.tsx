@@ -5,6 +5,7 @@ import { greeting, loadProfile, saveProfile, validateNickname, NICKNAME_MAX, typ
 import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
 import { copyRoutine, deleteRoutine, loadMyRoutines } from "@/lib/myRoutines";
 import { SAMPLE_ROUTINES, cloneRoutine, type Routine } from "@/lib/routines";
+import { WEIGHT_LIMITS, loadBody, saveBody, validateWeight, weightOf, type BodyState } from "@/lib/body";
 import { loadPrefs, savePrefs, showDefaultRoutines, type PrefsState } from "@/lib/prefs";
 import { clearAll } from "@/lib/storage";
 import DeleteRecordDialog from "./DeleteRecordDialog";
@@ -41,6 +42,17 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
   const [prefs, setPrefs] = useState<PrefsState | null>(null);
   // "기본 루틴 숨기기" 확인창
   const [hideDialog, setHideDialog] = useState(false);
+  // 체중(칼로리 계산용, 선택). null = 읽기 전
+  const [body, setBody] = useState<BodyState | null>(null);
+  const [weightInput, setWeightInput] = useState("");
+  const [weightError, setWeightError] = useState<string | null>(null);
+  const [editingWeight, setEditingWeight] = useState(false);
+
+  useEffect(() => {
+    // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBody(loadBody());
+  }, []);
 
   useEffect(() => {
     // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
@@ -104,11 +116,45 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
     setResetDialog(null);
     setMyRoutines([]);
     setPrefs({ kind: "none" }); // 처음 상태로: 기본 루틴을 다시 보여 주고 한 번 더 묻는다
+    setBody({ kind: "none" });
+    setWeightInput("");
+    setWeightError(null);
+    setEditingWeight(false);
     setRecent({ kind: "none" });
     setProfile({ kind: "none" }); // 닉네임을 새로 물어본다
     setNickInput("");
     setNickError(null);
   }
+
+  /** 체중 저장: 20~300kg 검사 후 저장한다. 실패하면 이유를 알린다 */
+  function handleSaveWeight() {
+    const v = validateWeight(weightInput);
+    if (!v.ok) {
+      setWeightError(v.error);
+      return;
+    }
+    if (!saveBody(v.weightKg)) {
+      setWeightError("저장하지 못했어요. 다시 시도해 주세요.");
+      return;
+    }
+    setWeightError(null);
+    setBody({ kind: "set", weightKg: v.weightKg });
+    setEditingWeight(false);
+  }
+
+  /** 체중 지우기: 칼로리 계산을 멈춘다(이미 저장된 기록의 칼로리는 그대로) */
+  function handleClearWeight() {
+    if (!saveBody(null)) {
+      setWeightError("지우지 못했어요. 다시 시도해 주세요.");
+      return;
+    }
+    setWeightError(null);
+    setBody({ kind: "set", weightKg: null });
+    setWeightInput("");
+    setEditingWeight(false);
+  }
+
+  const savedWeight = weightOf(body);
 
   /** 기본 루틴 보기 선택을 저장한다(저장에 실패해도 이번 화면에는 바로 반영한다) */
   function chooseDefaults(choice: "show" | "hide") {
@@ -213,6 +259,79 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
               : "아직 기록이 없습니다"}
         </p>
       </section>
+
+      {/* 체중(선택): 입력하면 종료 화면·기록에 예상 소모 칼로리를 보여 준다 */}
+      {body !== null && (
+        <section aria-labelledby="weight-title" className="rounded-2xl bg-surface p-4">
+          <h2 id="weight-title" className="text-sm font-medium text-muted">
+            체중 <span className="font-normal">(선택 · 칼로리 계산용)</span>
+          </h2>
+          {savedWeight !== null && !editingWeight ? (
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-lg font-bold">{savedWeight}kg</p>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWeightInput(String(savedWeight));
+                    setEditingWeight(true);
+                  }}
+                  className="min-h-11 rounded-xl px-3 text-sm text-muted underline"
+                >
+                  바꾸기
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearWeight}
+                  className="min-h-11 rounded-xl px-3 text-sm text-red-300 underline"
+                >
+                  지우기
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              className="mt-2 flex flex-col gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveWeight();
+              }}
+            >
+              <label htmlFor="weight" className="sr-only">
+                체중(kg)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="weight"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  aria-invalid={weightError ? true : undefined}
+                  placeholder={`${WEIGHT_LIMITS.min}~${WEIGHT_LIMITS.max}`}
+                  className={`min-h-11 w-full rounded-xl bg-background px-3 text-base outline-none focus:ring-2 ${
+                    weightError ? "ring-2 ring-red-400" : "focus:ring-accent"
+                  }`}
+                />
+                <span className="text-sm text-muted">kg</span>
+                <button type="submit" className="min-h-11 shrink-0 rounded-xl bg-accent px-4 font-bold text-black">
+                  저장
+                </button>
+              </div>
+              {weightError && (
+                <p role="alert" className="text-sm text-red-400">
+                  {weightError}
+                </p>
+              )}
+              <p className="text-xs text-muted">
+                이 폰에만 저장되고 서버로 보내지 않아요. 입력하지 않아도 모든 기능을 쓸 수 있어요. 칼로리는 참고용
+                추정값이에요.
+              </p>
+            </form>
+          )}
+        </section>
+      )}
 
       {/* 처음 한 번: 기본 루틴을 쓸지 묻는다 */}
       {askDefaults && (

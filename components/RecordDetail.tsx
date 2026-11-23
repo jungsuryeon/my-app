@@ -39,6 +39,10 @@ export default function RecordDetail({ record, onBack, onDelete }: Props) {
         <p className="mt-1 text-sm text-muted">
           완료 {done}/{total}세트 · 운동 시간 {formatDuration(record.activeSec)}
         </p>
+        <p className="mt-1 text-sm text-muted">
+          예상 소모 칼로리 {typeof record.kcal === "number" ? `약 ${record.kcal}kcal` : "-"}
+          {typeof record.kcal === "number" && " (참고용 추정값)"}
+        </p>
       </section>
 
       {record.exercises.map((ex, i) => (

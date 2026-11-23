@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   records: "records", // 저장된 운동 기록
   routines: "routines", // 내가 만든 루틴
   prefs: "prefs", // 홈 설정(기본 루틴을 보일지)
+  body: "body", // 체중(칼로리 계산용, 선택)
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

@@ -26,9 +26,17 @@ describe("날짜별 조회·통계·표시", () => {
   });
 
   it("월간 운동 일수와 횟수", () => {
-    expect(monthStats([a, b, c, d], 2026, 11)).toEqual({ days: 1, count: 3 });
-    expect(monthStats([a, b, c, d], 2026, 10)).toEqual({ days: 1, count: 1 });
-    expect(monthStats([], 2026, 11)).toEqual({ days: 0, count: 0 });
+    expect(monthStats([a, b, c, d], 2026, 11)).toEqual({ days: 1, count: 3, kcal: 0, kcalCount: 0 });
+    expect(monthStats([a, b, c, d], 2026, 10)).toEqual({ days: 1, count: 1, kcal: 0, kcalCount: 0 });
+    expect(monthStats([], 2026, 11)).toEqual({ days: 0, count: 0, kcal: 0, kcalCount: 0 });
+  });
+
+  it("월간 칼로리는 kcal이 있는 기록만 합친다(기존 기록은 제외)", () => {
+    const withKcal = { ...a, kcal: 120 };
+    const withKcal2 = { ...b, kcal: 80 };
+    const other = { ...d, kcal: 999 }; // 다른 달
+    const s = monthStats([withKcal, withKcal2, c, other], 2026, 11);
+    expect(s).toEqual({ days: 1, count: 3, kcal: 200, kcalCount: 2 });
   });
 
   it("시각·시간 표시", () => {

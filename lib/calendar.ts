@@ -41,10 +41,18 @@ export function monthStats(
   records: readonly WorkoutRecord[],
   year: number,
   month: number,
-): { days: number; count: number } {
+): { days: number; count: number; kcal: number; kcalCount: number } {
   const prefix = `${year}-${String(month).padStart(2, "0")}-`;
-  const keys = records.map(recordDayKey).filter((k) => k.startsWith(prefix));
-  return { days: new Set(keys).size, count: keys.length };
+  const inMonth = records.filter((r) => recordDayKey(r).startsWith(prefix));
+  const keys = inMonth.map(recordDayKey);
+  // 칼로리는 저장할 때 체중이 있었던 기록만 합친다(kcalCount = 합친 기록 수)
+  const withKcal = inMonth.filter((r) => typeof r.kcal === "number");
+  return {
+    days: new Set(keys).size,
+    count: keys.length,
+    kcal: withKcal.reduce((sum, r) => sum + (r.kcal ?? 0), 0),
+    kcalCount: withKcal.length,
+  };
 }
 
 /** "오후 3:05" */
