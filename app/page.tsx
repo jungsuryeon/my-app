@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Calendar from "@/components/Calendar";
 import EndDialog from "@/components/EndDialog";
 import Finish from "@/components/Finish";
 import Home from "@/components/Home";
@@ -22,6 +23,8 @@ export default function Page() {
 
   // 복원했을 때 보여 주는 안내 문구(닫을 수 있다)
   const [notice, setNotice] = useState<string | null>(null);
+  // 홈 대신 운동 캘린더를 보여 주는가(세션이 없을 때만 의미가 있다)
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // 화면이 그려진 뒤 한 번, 저장해 둔 진행 상태가 있으면 되살린다(localStorage는 여기서만 읽는다)
   const { restore } = workout;
@@ -167,8 +170,13 @@ export default function Page() {
       );
     }
 
+    if (showCalendar) {
+      return <Calendar onBack={() => setShowCalendar(false)} />;
+    }
+
     return (
       <Home
+        onOpenCalendar={() => setShowCalendar(true)}
         onSelectRoutine={(id) => {
           const routine = cloneRoutine(id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
           if (routine) setSelected(routine);

@@ -23,6 +23,8 @@ export type Snapshot = {
   /** 기록 ID. 같은 ID로 저장하면 덮어쓰기만 한다(중복 저장 방지) */
   recordId: string;
   routine: { id: string; name: string };
+  /** 운동을 시작한 시각(Date.now()). 이전 버전이 저장한 스냅샷에는 없다 */
+  startedAt?: number;
   /** 마지막 저장 시각. 날짜와 30분 판정은 새로고침해도 이어지는 Date.now()를 쓴다 */
   savedAt: number;
   phase: Phase;
@@ -46,6 +48,7 @@ export type Snapshot = {
 export function buildSnapshot(args: {
   recordId: string;
   routine: { id: string; name: string };
+  startedAt?: number;
   session: Session;
   /** performance.now() 값 (경과 시간 계산용) */
   nowMs: number;
@@ -57,6 +60,7 @@ export function buildSnapshot(args: {
   return {
     recordId: args.recordId,
     routine: args.routine,
+    ...(args.startedAt !== undefined ? { startedAt: args.startedAt } : {}),
     savedAt: args.nowDate,
     phase: m.phase,
     pausedFrom: m.pausedFrom,
@@ -92,6 +96,7 @@ export function isSnapshot(v: unknown): v is Snapshot {
   return (
     typeof v.recordId === "string" &&
     typeof v.savedAt === "number" &&
+    (v.startedAt === undefined || typeof v.startedAt === "number") &&
     typeof v.activeMs === "number" &&
     typeof v.phase === "string" &&
     (PHASES as string[]).includes(v.phase) &&
@@ -107,6 +112,7 @@ export type RestoreResult =
       session: Session;
       routine: { id: string; name: string };
       recordId: string;
+      startedAt?: number;
       /** 사용자에게 보여 줄 안내 문구 */
       notice: string;
     };
@@ -131,7 +137,11 @@ export function restoreFromSnapshot(snap: Snapshot, nowDate: number): RestoreRes
     clock: createClock(),
     activeMs: snap.activeMs,
   };
-  const base = { routine: snap.routine, recordId: snap.recordId };
+  const base = {
+    routine: snap.routine,
+    recordId: snap.recordId,
+    ...(snap.startedAt !== undefined ? { startedAt: snap.startedAt } : {}),
+  };
 
   if (snap.phase === "COMPLETED") {
     return { kind: "restored", session, ...base, notice: NOTICES.restoredCompleted };
@@ -192,6 +202,8 @@ export type WorkoutRecord = {
   id: string;
   /** 날짜(Date.now() 값) */
   date: number;
+  /** 운동 시작 시각(Date.now()). 새 기록에만 있다. 캘린더는 이 값이 있으면 이 날짜에 표시한다 */
+  startedAt?: number;
   routineId: string;
   routineName: string;
   /** 활성 운동 시간(초). EXERCISE에서 실제로 흐른 시간의 합계 */
@@ -212,11 +224,13 @@ export function buildRecord(args: {
   routine: { id: string; name: string };
   session: Session;
   nowDate: number;
+  startedAt?: number;
 }): WorkoutRecord {
   const { session } = args;
   return {
     id: args.recordId,
     date: args.nowDate,
+    ...(args.startedAt !== undefined ? { startedAt: args.startedAt } : {}),
     routineId: args.routine.id,
     routineName: args.routine.name,
     activeSec: Math.round(session.activeMs / 1000),
@@ -252,6 +266,7 @@ function isRecord(v: unknown): v is WorkoutRecord {
     isObject(v) &&
     typeof v.id === "string" &&
     typeof v.date === "number" &&
+    (v.startedAt === undefined || typeof v.startedAt === "number") &&
     typeof v.routineId === "string" &&
     typeof v.routineName === "string" &&
     typeof v.activeSec === "number" &&

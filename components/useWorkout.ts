@@ -80,7 +80,7 @@ function newRecordId(): string {
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-type Meta = { recordId: string; routine: { id: string; name: string } };
+type Meta = { recordId: string; routine: { id: string; name: string }; startedAt?: number };
 
 const ACTIVE = ["COUNTDOWN", "EXERCISE", "REST"];
 
@@ -122,7 +122,7 @@ export function useWorkout() {
   const begin = useCallback(
     (exercises: SessionExercise[], routine: { id: string; name: string }) =>
       void guard.run("start", () => {
-        metaRef.current = { recordId: newRecordId(), routine };
+        metaRef.current = { recordId: newRecordId(), routine, startedAt: Date.now() };
         engine.reset();
         const now = performance.now();
         setNowMs(now);
@@ -243,7 +243,13 @@ export function useWorkout() {
       const meta = metaRef.current;
       if (!s || !meta) return;
       result.value = saveRecord(
-        buildRecord({ recordId: meta.recordId, routine: meta.routine, session: s, nowDate: Date.now() }),
+        buildRecord({
+          recordId: meta.recordId,
+          routine: meta.routine,
+          session: s,
+          nowDate: Date.now(),
+          startedAt: meta.startedAt,
+        }),
       );
     });
     return result.value;
@@ -277,7 +283,7 @@ export function useWorkout() {
   /** 새로고침·재실행 후 저장해 둔 진행 상태를 되살린다(일시정지·준비 화면·종료 화면 중 하나로 시작) */
   const restore = useCallback(
     (r: Exclude<RestoreResult, { kind: "none" }>) => {
-      metaRef.current = { recordId: r.recordId, routine: r.routine };
+      metaRef.current = { recordId: r.recordId, routine: r.routine, startedAt: r.startedAt };
       engine.reset();
       setAwayPaused(false);
       commit(r.session);
@@ -327,6 +333,7 @@ export function useWorkout() {
         buildSnapshot({
           recordId: meta.recordId,
           routine: meta.routine,
+          startedAt: meta.startedAt,
           session: s,
           nowMs: performance.now(),
           nowDate: Date.now(),
