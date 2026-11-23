@@ -31,6 +31,37 @@ export function countByDay(records: readonly WorkoutRecord[]): Map<string, numbe
   return map;
 }
 
+/** 그 날짜 키의 기록들. 시작 시각이 이른 순 */
+export function recordsOnDay(records: readonly WorkoutRecord[], key: string): WorkoutRecord[] {
+  return records.filter((r) => recordDayKey(r) === key).sort((a, b) => recordTime(a) - recordTime(b));
+}
+
+/** 그 달의 운동 일수와 운동 횟수(기록 수) */
+export function monthStats(
+  records: readonly WorkoutRecord[],
+  year: number,
+  month: number,
+): { days: number; count: number } {
+  const prefix = `${year}-${String(month).padStart(2, "0")}-`;
+  const keys = records.map(recordDayKey).filter((k) => k.startsWith(prefix));
+  return { days: new Set(keys).size, count: keys.length };
+}
+
+/** "오후 3:05" */
+export function formatClock(ms: number): string {
+  const d = new Date(ms);
+  const h = d.getHours();
+  const period = h < 12 ? "오전" : "오후";
+  return `${period} ${h % 12 === 0 ? 12 : h % 12}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** 활성 운동 시간(초) → "12분 05초" / "45초" */
+export function formatDuration(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  if (s < 60) return `${s}초`;
+  return `${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, "0")}초`;
+}
+
 /** 이전·다음 달로 옮긴다(delta: -1, +1 …) */
 export function shiftMonth(ym: YearMonth, delta: number): YearMonth {
   const idx = ym.year * 12 + (ym.month - 1) + delta;

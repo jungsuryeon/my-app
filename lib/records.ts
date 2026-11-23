@@ -348,6 +348,38 @@ export function formatRecordLine(rec: WorkoutRecord): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 · ${rec.routineName} · 완료 ${done}/${total}세트`;
 }
 
+export const DELETE_MESSAGES = {
+  storage: "삭제하지 못했어요. 브라우저 설정이나 저장 공간을 확인한 뒤 다시 시도해 주세요.",
+  corrupt: "저장된 기록 목록이 손상돼 있어서 삭제하지 않았어요.",
+  missing: "이미 없는 기록이에요.",
+} as const;
+
+export type DeleteResult =
+  | { ok: true; records: WorkoutRecord[] }
+  | { ok: false; reason: "corrupt" | "storage" | "missing"; message: string };
+
+/**
+ * 기록 하나를 지운다(전체 초기화와 별개). 손상된 목록은 건드리지 않고,
+ * 쓴 뒤 다시 읽어 실제로 지워졌는지 확인한다. 성공하면 남은 목록을 돌려준다.
+ */
+export function deleteRecord(id: string): DeleteResult {
+  const fail = (reason: "corrupt" | "storage" | "missing"): DeleteResult => ({
+    ok: false,
+    reason,
+    message: DELETE_MESSAGES[reason],
+  });
+  const current = readItem<WorkoutRecord[]>(STORAGE_KEYS.records, isRecordList);
+  if (!current.ok) return fail("storage");
+  if (current.invalid) return fail("corrupt");
+  const list = current.value ?? [];
+  if (!list.some((r) => r.id === id)) return fail("missing");
+  const next = list.filter((r) => r.id !== id);
+  if (!writeItem(STORAGE_KEYS.records, next).ok) return fail("storage");
+  const back = readItem<WorkoutRecord[]>(STORAGE_KEYS.records, isRecordList);
+  if (!back.ok || back.invalid || (back.value ?? []).some((r) => r.id === id)) return fail("storage");
+  return { ok: true, records: back.value ?? [] };
+}
+
 /** 저장된 기록 목록을 읽는다. 손상됐으면 invalid. */
 export function loadRecords():
   | { ok: true; records: WorkoutRecord[]; invalid: boolean }
