@@ -3,7 +3,9 @@ import {
   SAVE_MESSAGES,
   buildRecord,
   countSets,
+  formatRecordLine,
   isRecordList,
+  latestRecord,
   loadRecords,
   saveRecord,
 } from "./records";
@@ -68,6 +70,34 @@ describe("기록 만들기", () => {
     const rec = buildRecord({ recordId: "r", routine, session: s, nowDate: T0 });
     expect(rec.exercises[0].sets[1].reps).toBe(2);
     expect(isRecordList([rec])).toBe(true);
+  });
+});
+
+describe("최근 기록 한 줄", () => {
+  const at = (id: string, date: number) =>
+    buildRecord({ recordId: id, routine, session: finished(), nowDate: date });
+
+  it("가장 최근 날짜의 기록을 고른다(저장 순서와 무관)", () => {
+    const a = at("a", new Date(2026, 10, 20, 9).getTime());
+    const b = at("b", new Date(2026, 10, 23, 9).getTime());
+    const c = at("c", new Date(2026, 10, 21, 9).getTime());
+    expect(latestRecord([a, b, c])?.id).toBe("b");
+    expect(latestRecord([c, a, b])?.id).toBe("b");
+  });
+
+  it("기록이 없으면 null", () => {
+    expect(latestRecord([])).toBeNull();
+  });
+
+  it("날짜·루틴 이름·완료 세트 수/전체 세트 수를 한 줄로 만든다", () => {
+    const rec = at("a", new Date(2026, 10, 23, 18, 30).getTime());
+    expect(formatRecordLine(rec)).toBe("11월 23일 · 상체 데이 · 완료 2/3세트");
+  });
+
+  it("건너뛴·미수행 세트는 완료 수에 넣지 않는다", () => {
+    const s = skipSet(runTo(startSession(createSession(exercises), 0), 4500), 4500);
+    const rec = buildRecord({ recordId: "s", routine, session: endSession(s), nowDate: new Date(2026, 0, 5).getTime() });
+    expect(formatRecordLine(rec)).toBe("1월 5일 · 상체 데이 · 완료 0/3세트");
   });
 });
 

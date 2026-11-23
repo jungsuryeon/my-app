@@ -318,6 +318,21 @@ export function saveRecord(rec: WorkoutRecord): SaveResult {
   return { ok: true };
 }
 
+/** 날짜가 가장 늦은 기록. 없으면 null */
+export function latestRecord(records: readonly WorkoutRecord[]): WorkoutRecord | null {
+  return records.reduce<WorkoutRecord | null>(
+    (best, r) => (best === null || r.date > best.date ? r : best),
+    null,
+  );
+}
+
+/** 홈에 보여 줄 한 줄: "11월 23일 · 상체 데이 · 완료 6/9세트" (날짜는 이 기기의 시간대 기준) */
+export function formatRecordLine(rec: WorkoutRecord): string {
+  const d = new Date(rec.date);
+  const { done, total } = countSets(rec);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 · ${rec.routineName} · 완료 ${done}/${total}세트`;
+}
+
 /** 저장된 기록 목록을 읽는다. 손상됐으면 invalid. */
 export function loadRecords():
   | { ok: true; records: WorkoutRecord[]; invalid: boolean }
