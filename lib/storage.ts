@@ -14,6 +14,7 @@ export const STORAGE_KEYS = {
   snapshot: "snapshot", // 진행 중 운동 상태
   records: "records", // 저장된 운동 기록
   routines: "routines", // 내가 만든 루틴
+  prefs: "prefs", // 홈 설정(기본 루틴을 보일지)
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

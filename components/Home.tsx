@@ -5,6 +5,7 @@ import { greeting, loadProfile, saveProfile, validateNickname, NICKNAME_MAX, typ
 import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
 import { copyRoutine, deleteRoutine, loadMyRoutines } from "@/lib/myRoutines";
 import { SAMPLE_ROUTINES, cloneRoutine, type Routine } from "@/lib/routines";
+import { loadPrefs, savePrefs, showDefaultRoutines, type PrefsState } from "@/lib/prefs";
 import { clearAll } from "@/lib/storage";
 import DeleteRecordDialog from "./DeleteRecordDialog";
 import ResetDialog from "./ResetDialog";
@@ -35,6 +36,17 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
   const [myRoutines, setMyRoutines] = useState<Routine[] | "unreadable" | null>(null);
   // 삭제 확인창: 대상 루틴 id와 실패 안내
   const [deleting, setDeleting] = useState<{ id: string; error: string | null } | null>(null);
+
+  // 기본 루틴을 보일지 정한 설정. null = 읽기 전
+  const [prefs, setPrefs] = useState<PrefsState | null>(null);
+  // "기본 루틴 숨기기" 확인창
+  const [hideDialog, setHideDialog] = useState(false);
+
+  useEffect(() => {
+    // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrefs(loadPrefs());
+  }, []);
 
   useEffect(() => {
     // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
@@ -91,11 +103,23 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
     }
     setResetDialog(null);
     setMyRoutines([]);
+    setPrefs({ kind: "none" }); // 처음 상태로: 기본 루틴을 다시 보여 주고 한 번 더 묻는다
     setRecent({ kind: "none" });
     setProfile({ kind: "none" }); // 닉네임을 새로 물어본다
     setNickInput("");
     setNickError(null);
   }
+
+  /** 기본 루틴 보기 선택을 저장한다(저장에 실패해도 이번 화면에는 바로 반영한다) */
+  function chooseDefaults(choice: "show" | "hide") {
+    savePrefs({ defaultRoutines: choice });
+    setPrefs({ kind: "set", prefs: { defaultRoutines: choice } });
+    setHideDialog(false);
+  }
+
+  const defaultsVisible = showDefaultRoutines(prefs);
+  // 닉네임 카드에 답한 뒤(또는 이미 답한 상태)에 처음 한 번 묻는다
+  const askDefaults = prefs?.kind === "none" && profile !== null && profile.kind !== "none";
 
   const mine = Array.isArray(myRoutines) ? myRoutines : [];
   const deleteTarget = deleting ? mine.find((r) => r.id === deleting.id) : undefined;
@@ -190,10 +214,51 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
         </p>
       </section>
 
+      {/* 처음 한 번: 기본 루틴을 쓸지 묻는다 */}
+      {askDefaults && (
+        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
+          <h2 id="defaults-title" className="text-base font-bold">
+            기본 루틴을 쓸까요?
+          </h2>
+          <p className="text-sm text-muted">
+            상체 데이·하체 데이는 바로 써 볼 수 있는 예시 루틴이에요. 내 루틴만 쓰려면 숨길 수 있고, 나중에 홈에서
+            다시 볼 수 있어요.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => chooseDefaults("hide")}
+              className="min-h-11 rounded-xl bg-white/10 px-3"
+            >
+              내 루틴만 쓸게요
+            </button>
+            <button
+              type="button"
+              onClick={() => chooseDefaults("show")}
+              className="min-h-11 rounded-xl bg-accent px-3 font-bold text-black"
+            >
+              기본 루틴 쓸게요
+            </button>
+          </div>
+        </section>
+      )}
+
+      {defaultsVisible && (
       <section aria-labelledby="routine-title" className="flex flex-col gap-3">
-        <h2 id="routine-title" className="text-sm font-medium text-muted">
-          기본 루틴
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 id="routine-title" className="text-sm font-medium text-muted">
+            기본 루틴
+          </h2>
+          {!askDefaults && (
+            <button
+              type="button"
+              onClick={() => setHideDialog(true)}
+              className="-mr-2 min-h-11 rounded-xl px-2 text-sm text-muted underline"
+            >
+              숨기기
+            </button>
+          )}
+        </div>
         {SAMPLE_ROUTINES.map((r) => (
           <button
             key={r.id}
@@ -211,6 +276,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
           </button>
         ))}
       </section>
+      )}
 
       {myRoutines === "unreadable" && (
         <p role="alert" className="rounded-2xl bg-red-400/15 px-4 py-3 text-sm text-red-200">
@@ -262,6 +328,16 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
         </button>
       </section>
 
+      {!defaultsVisible && (
+        <button
+          type="button"
+          onClick={() => chooseDefaults("show")}
+          className="min-h-11 self-center rounded-xl px-4 text-sm text-muted underline"
+        >
+          기본 루틴 다시 보기
+        </button>
+      )}
+
       <button
         type="button"
         onClick={() => setResetDialog("")}
@@ -269,6 +345,18 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
       >
         데이터 초기화
       </button>
+
+      {hideDialog && (
+        <DeleteRecordDialog
+          title="기본 루틴을 숨길까요?"
+          note="상체 데이·하체 데이가 홈에서 사라져요. 지워지는 건 아니고, 홈 아래쪽 '기본 루틴 다시 보기'로 언제든 되돌릴 수 있어요."
+          label="상체 데이 · 하체 데이"
+          confirmText="숨기기"
+          error={null}
+          onCancel={() => setHideDialog(false)}
+          onConfirm={() => chooseDefaults("hide")}
+        />
+      )}
 
       {deleting && deleteTarget && (
         <DeleteRecordDialog
