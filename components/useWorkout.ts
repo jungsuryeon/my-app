@@ -12,8 +12,11 @@ import {
   type Cue,
 } from "@/lib/cues";
 import { isLastExercise, isLastSetOfExercise } from "@/lib/machine";
+import { createClickGuard } from "@/lib/clickGuard";
 import {
   createSession,
+  pauseSession,
+  resumeSession,
   startSession,
   tick,
   updateExercise,
@@ -48,6 +51,10 @@ function cuesFor(s: Session): Cue[] {
   return [];
 }
 
+// 일시정지와 이어하기는 화면의 같은 자리에 번갈아 나타나는 버튼이므로 같은 버튼으로 본다
+// (실수로 두 번 눌러 멈췄다가 바로 이어지는 일을 막는다)
+const PAUSE_TOGGLE = "pause-toggle";
+
 const ACTIVE = ["COUNTDOWN", "EXERCISE", "REST"];
 
 /**
@@ -68,6 +75,9 @@ export function useWorkout() {
     }),
   );
 
+  // 모든 버튼 동작은 연속 클릭 방지(0.5초)를 거친다
+  const [guard] = useState(() => createClickGuard());
+
   const commit = useCallback((next: Session | null) => {
     sessionRef.current = next;
     setSession(next);
@@ -75,25 +85,54 @@ export function useWorkout() {
 
   /** 첫 운동 "운동 시작" 탭: 새 세션을 만들고 바로 카운트다운을 시작한다 */
   const begin = useCallback(
-    (exercises: SessionExercise[]) => {
-      engine.reset();
-      const now = performance.now();
-      setNowMs(now);
-      commit(startSession(createSession(exercises), now));
-    },
-    [commit, engine],
+    (exercises: SessionExercise[]) =>
+      void guard.run("start", () => {
+        engine.reset();
+        const now = performance.now();
+        setNowMs(now);
+        commit(startSession(createSession(exercises), now));
+      }),
+    [commit, engine, guard],
   );
 
   /** 운동 사이 준비 화면에서 "운동 시작" 탭: 고친 값을 반영하고 카운트다운을 시작한다 */
   const startNext = useCallback(
-    (values: Pick<SessionExercise, "reps" | "sets" | "restSec" | "tempoSec">) => {
-      const s = sessionRef.current;
-      if (!s) return;
-      const now = performance.now();
-      setNowMs(now);
-      commit(startSession(updateExercise(s, s.machine.exerciseIndex, values), now));
-    },
-    [commit],
+    (values: Pick<SessionExercise, "reps" | "sets" | "restSec" | "tempoSec">) =>
+      void guard.run("start", () => {
+        const s = sessionRef.current;
+        if (!s) return;
+        const now = performance.now();
+        setNowMs(now);
+        commit(startSession(updateExercise(s, s.machine.exerciseIndex, values), now));
+      }),
+    [commit, guard],
+  );
+
+  /** 일시정지: 재생 중인 음성을 취소하고 시간을 멈춘다. 남은 시간은 세션이 저장한다 */
+  const pause = useCallback(
+    () =>
+      void guard.run(PAUSE_TOGGLE, () => {
+        const s = sessionRef.current;
+        if (!s) return;
+        const now = performance.now();
+        engine.pause();
+        setNowMs(now);
+        commit(pauseSession(s, now));
+      }),
+    [commit, engine, guard],
+  );
+
+  /** 이어하기: 멈췄던 상태로 돌아가 남은 시간부터 다시 센다 */
+  const resume = useCallback(
+    () =>
+      void guard.run(PAUSE_TOGGLE, () => {
+        const s = sessionRef.current;
+        if (!s) return;
+        const now = performance.now();
+        setNowMs(now);
+        commit(resumeSession(s, now));
+      }),
+    [commit, guard],
   );
 
   /** 세션을 버리고 홈으로 돌아갈 때 */
@@ -119,5 +158,5 @@ export function useWorkout() {
     return ticker.stop;
   }, [active, commit, engine]);
 
-  return { session, nowMs, begin, startNext, exit };
+  return { session, nowMs, begin, startNext, pause, resume, exit };
 }

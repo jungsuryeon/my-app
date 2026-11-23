@@ -38,8 +38,16 @@ export default function Page() {
       );
     }
 
-    if (phase === "COUNTDOWN" || phase === "EXERCISE" || phase === "REST") {
-      return <Progress session={session} nowMs={workout.nowMs} onAbort={goHome} />;
+    if (phase === "COUNTDOWN" || phase === "EXERCISE" || phase === "REST" || phase === "PAUSED") {
+      return (
+        <Progress
+          session={session}
+          nowMs={workout.nowMs}
+          onPause={workout.pause}
+          onResume={workout.resume}
+          onAbort={goHome}
+        />
+      );
     }
 
     // COMPLETED 등: ⚠ 임시 화면. 종료 화면(반복 수 확인·저장)은 작업 19·20에서 만든다
