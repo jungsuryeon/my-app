@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countdownCues, restCountdownCues, setCues, startCue, type Cue } from "./cues";
+import { countdownCues, restCountdownCues, setCues, type Cue } from "./cues";
 import { createSoundEngine, type SoundDeps } from "./sound";
 import type { BeepKind, SpeakCallbacks } from "./audio";
 
@@ -47,9 +47,10 @@ describe("안내 만들기", () => {
     expect(set(2, false)[1].voiceFallback).toEqual([]);
   });
 
-  it("카운트다운 비프는 0·1·2초, 시작 음성은 0ms", () => {
-    expect(countdownCues(0, 0).map((c) => c.atMs)).toEqual([0, 1000, 2000]);
-    expect(startCue().voice).toBe("운동을 시작합니다.");
+  it("시작 전 카운트다운은 삑·삑·삑 3번(0·1·2초)이고 음성은 없다", () => {
+    const c = countdownCues(0, 0);
+    expect(c.map((x) => x.atMs)).toEqual([0, 1000, 2000]);
+    expect(c.every((x) => x.kind === "countdown" && x.voice === undefined)).toBe(true);
   });
 
   it("두 번째 운동의 안내 ID는 첫 운동과 겹치지 않는다", () => {

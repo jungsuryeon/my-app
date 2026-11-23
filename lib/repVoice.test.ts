@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countWord, setCues, startCue, countdownCues } from "./cues";
+import { countWord, setCues, countdownCues } from "./cues";
 import { createSoundEngine, type SoundDeps } from "./sound";
 import type { BeepKind, SpeakCallbacks } from "./audio";
 
@@ -65,9 +65,9 @@ describe("반복 숫자 음성", () => {
   it("세트 완료·시작 음성이 재생 중이면 숫자를 내지 않는다", () => {
     const f = fake();
     const e = createSoundEngine(f.deps);
-    e.emit([startCue()], 0, 0); // 시작 음성 재생 중
+    e.emit([{ id: "V", voice: "안내 음성", atMs: 0 }], 0, 0); // 다른 음성 재생 중
     e.emit(cues(), 1000, 1000);
-    expect(f.log).toEqual(["speak:운동을 시작합니다."]);
+    expect(f.log).toEqual(["speak:안내 음성"]);
   });
 
   it("마지막 반복에서는 세트 완료음과 음성이 숫자를 대신한다", () => {

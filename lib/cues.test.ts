@@ -78,13 +78,13 @@ describe("음성 문구와 혼합 모드", () => {
   });
 
   it("시작·루틴 완료 문구", () => {
-    expect(PHRASES.start).toBe("운동을 시작합니다.");
     expect(PHRASES.routineDone).toBe("모든 운동을 완료했습니다.");
   });
 
   it("혼합 모드: 휴식 카운트다운은 비프, 반복 숫자·세트 완료·운동 전환·시작·종료는 음성", () => {
     expect(MIXED_MODE.restCountdown).toBe("beep");
-    for (const e of ["rep", "start", "setDone", "exerciseDone", "routineDone"] as const) {
+    expect(MIXED_MODE.countdown).toBe("beep");
+    for (const e of ["rep", "setDone", "exerciseDone", "routineDone"] as const) {
       expect(MIXED_MODE[e]).toBe("voice");
     }
   });

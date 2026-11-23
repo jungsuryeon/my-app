@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { initAudio, playBeep, speakKorean, waitSpeechReady } from "@/lib/audio";
-import { PHRASES } from "@/lib/cues";
 import {
   toInput,
   validateInput,
@@ -68,8 +67,8 @@ export default function Ready({ routine, exerciseIndex, onBack, backLabel = "←
   function handleStart() {
     if (!values) return; // 값이 틀리면 시작하지 않는다(버튼도 막혀 있다)
     // 오디오는 반드시 이 버튼을 누른 클릭 처리 안에서 켠다(iPhone 규칙)
+    // 시작 음성은 내지 않는다: 바로 이어지는 3초 카운트다운 삑·삑·삑이 묻히지 않게 하기 위함
     initAudio();
-    speakKorean(PHRASES.start);
     onStart(values);
   }
 

@@ -59,7 +59,6 @@ export function dueCues(cues: Cue[], elapsedMs: number, emitted: ReadonlySet<str
 
 /** 음성 문구 (PRD M2). 세트 완료와 휴식 시작은 한 문장으로 합쳐 한 번에 말한다. */
 export const PHRASES = {
-  start: "운동을 시작합니다.",
   routineDone: "모든 운동을 완료했습니다.",
 } as const;
 
@@ -85,7 +84,7 @@ export function countWord(n: number): string {
 
 /** 소리가 나는 상황 */
 export type SoundEvent =
-  | "start" // 운동 시작
+  | "countdown" // 시작 전 3·2·1초
   | "rep" // 반복 하나
   | "setDone" // 세트 완료(+ 휴식 시작)
   | "exerciseDone" // 운동의 마지막 세트 완료
@@ -97,7 +96,7 @@ export type SoundEvent =
  * 휴식 종료는 별도 음성 없이 3·2·1 비프가 대신한다.
  */
 export const MIXED_MODE: Record<SoundEvent, "beep" | "voice"> = {
-  start: "voice",
+  countdown: "beep", // 시작 음성 없이 삑·삑·삑만 낸다
   rep: "voice",
   setDone: "voice",
   exerciseDone: "voice",
@@ -106,11 +105,6 @@ export const MIXED_MODE: Record<SoundEvent, "beep" | "voice"> = {
 };
 
 // ───────────────────────── 안내 만들기 (PLAN 작업 11) ─────────────────────────
-
-/** 운동 시작 음성. "운동 시작" 탭 순간에 낸다. */
-export function startCue(): Cue {
-  return { id: "START", voice: PHRASES.start, atMs: 0 };
-}
 
 /** 시작 전 3초 카운트다운: 3·2·1 비프를 0·1·2초 시점에 낸다 */
 export function countdownCues(exerciseIndex: number, setIndex: number): Cue[] {
