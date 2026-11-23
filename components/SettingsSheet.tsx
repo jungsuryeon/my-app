@@ -122,7 +122,7 @@ export default function SettingsSheet({ onClose, onProfileChange, onPrefsChange,
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-3 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 px-3 sm:items-center"
       role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

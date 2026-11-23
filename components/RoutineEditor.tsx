@@ -91,13 +91,13 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
   if (picking) {
     const results = applyFilter(filter);
     return (
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
+      <main className="screen-in mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
         <header className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setPicking(false)}
             aria-label="루틴 편집으로"
-            className="-ml-2 min-h-11 min-w-11 rounded-xl px-2 text-lg"
+            className="min-h-11 min-w-11 rounded-full bg-surface px-2 text-lg shadow-card press"
           >
             ←
           </button>
@@ -109,7 +109,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
             <p className="text-base">맞는 운동이 없어요. 다른 이름이나 조건으로 찾아 보세요.</p>
           ) : (
             results.map((c) => (
-              <div key={c.key} className="rounded-2xl bg-surface shadow-card">
+              <div key={c.key} className="rounded-3xl bg-surface shadow-card">
                 <div className="flex items-stretch">
                   <button
                     type="button"
@@ -149,13 +149,13 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
+    <main className="screen-in mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
       <header className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => (dirty ? setConfirmCancel(true) : onCancel())}
           aria-label="취소"
-          className="-ml-2 min-h-11 min-w-11 rounded-xl px-2 text-lg"
+          className="min-h-11 min-w-11 rounded-full bg-surface px-2 text-lg shadow-card press"
         >
           ←
         </button>
@@ -174,7 +174,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={`최대 ${MY_ROUTINE_LIMITS.nameMax}글자 (예: 가슴 데이)`}
-          className="min-h-11 w-full rounded-xl bg-surface shadow-card px-3 text-base outline-none focus:ring-2 focus:ring-accent"
+          className="min-h-11 w-full rounded-2xl bg-surface shadow-card px-3 text-base outline-none focus:ring-2 focus:ring-accent"
         />
       </div>
 
@@ -183,7 +183,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
         {items.map((it, i) => {
           const { errors } = validateInput(it.input);
           return (
-            <div key={it.uid} className="rounded-2xl bg-surface shadow-card p-3">
+            <div key={it.uid} className="rounded-3xl bg-surface shadow-card p-3">
               <div className="flex items-center gap-1">
                 <p className="flex-1 pl-1">
                   <span className="text-muted">{i + 1}. </span>
@@ -293,7 +293,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
       <button
         type="button"
         onClick={handleSave}
-        className="sticky bottom-4 mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent shadow-lg"
+        className="sticky bottom-4 mt-auto min-h-14 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button press shadow-lg"
       >
         {editing ? "수정 저장" : "루틴 저장"}
       </button>

@@ -21,20 +21,20 @@ export function recordTitle(rec: WorkoutRecord): string {
 export default function RecordDetail({ record, onBack, onDelete }: Props) {
   const { done, total } = countSets(record);
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
+    <main className="screen-in mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
       <header className="flex items-center gap-2">
         <button
           type="button"
           onClick={onBack}
           aria-label="달력으로"
-          className="-ml-2 min-h-11 min-w-11 rounded-xl px-2 text-lg"
+          className="min-h-11 min-w-11 rounded-full bg-surface px-2 text-lg shadow-card press"
         >
           ←
         </button>
         <h1 className="text-2xl font-bold">{record.routineName}</h1>
       </header>
 
-      <section className="rounded-2xl bg-surface shadow-card p-4">
+      <section className="rounded-3xl bg-surface shadow-card p-4">
         <p className="text-base">{recordTitle(record)}</p>
         <p className="mt-1 text-sm text-muted">
           완료 {done}/{total}세트 · 운동 시간 {formatDuration(record.activeSec)}
@@ -46,7 +46,7 @@ export default function RecordDetail({ record, onBack, onDelete }: Props) {
       </section>
 
       {record.exercises.map((ex, i) => (
-        <section key={i} className="rounded-2xl bg-surface shadow-card p-4">
+        <section key={i} className="rounded-3xl bg-surface shadow-card p-4">
           <h2 className="text-lg font-bold">{ex.name}</h2>
           <p className="text-sm text-muted">무게 {ex.weightKg === null ? "-" : `${ex.weightKg}kg`}</p>
           <ul className="mt-2 flex flex-col gap-1">

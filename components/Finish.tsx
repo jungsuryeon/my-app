@@ -94,7 +94,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
         <button
           type="button"
           onClick={onHome}
-          className="min-h-12 w-full rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
+          className="min-h-12 w-full rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button press"
         >
           홈으로
         </button>
@@ -135,7 +135,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
       </header>
 
       {body !== null && (
-        <section aria-label="예상 소모 칼로리" className="rounded-2xl bg-surface shadow-card p-4">
+        <section aria-label="예상 소모 칼로리" className="rounded-3xl bg-surface shadow-card p-4">
           {kcal !== null ? (
             <>
               <p className="text-sm text-muted">예상 소모 칼로리</p>
@@ -156,7 +156,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
 
       <div className="flex flex-col gap-4">
         {session.exercises.map((ex, ei) => (
-          <section key={ex.id} aria-labelledby={`ex-${ei}`} className="rounded-2xl bg-surface shadow-card p-4">
+          <section key={ex.id} aria-labelledby={`ex-${ei}`} className="rounded-3xl bg-surface shadow-card p-4">
             <h2 id={`ex-${ei}`} className="mb-2 text-lg font-bold">
               {ex.name}
               <span className="ml-2 text-sm font-normal text-muted">
@@ -223,13 +223,13 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-on-accent disabled:opacity-40"
+        className="min-h-14 rounded-3xl bg-accent px-4 text-xl font-bold text-on-accent shadow-button press disabled:opacity-40"
       >
         {error ? "다시 저장" : saving ? "저장하는 중…" : "기록 저장"}
       </button>
 
       {confirmDiscard ? (
-        <div className="flex flex-col gap-2 rounded-2xl bg-surface shadow-card p-4">
+        <div className="flex flex-col gap-2 rounded-3xl bg-surface shadow-card p-4">
           <p className="text-sm">이 운동 기록이 삭제돼요. 저장하지 않고 나갈까요?</p>
           <div className="grid grid-cols-2 gap-2">
             <button

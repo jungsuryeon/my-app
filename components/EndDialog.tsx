@@ -22,7 +22,7 @@ export default function EndDialog({ onContinue, onSaveAndEnd, onDiscard }: Props
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 pb-8 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 px-4 pb-8 sm:items-center"
       role="presentation"
     >
       <div
@@ -41,14 +41,14 @@ export default function EndDialog({ onContinue, onSaveAndEnd, onDiscard }: Props
           ref={firstRef}
           type="button"
           onClick={onContinue}
-          className="min-h-12 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
+          className="min-h-12 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button press"
         >
           계속하기
         </button>
         <button
           type="button"
           onClick={onSaveAndEnd}
-          className="min-h-12 rounded-2xl bg-chip px-4 text-lg font-bold"
+          className="min-h-12 rounded-2xl bg-chip px-4 text-lg font-bold press"
         >
           저장 후 종료
         </button>

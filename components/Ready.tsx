@@ -79,7 +79,7 @@ export default function Ready({ routine, exerciseIndex, onBack, backLabel = "←
           type="button"
           onClick={onBack}
           aria-label={backLabel === "←" ? "홈으로" : backLabel}
-          className="min-h-11 min-w-11 rounded-xl bg-surface shadow-card px-3 text-lg"
+          className="min-h-11 min-w-11 rounded-full bg-surface shadow-card px-3 text-lg press"
         >
           {backLabel}
         </button>
@@ -133,7 +133,7 @@ export default function Ready({ routine, exerciseIndex, onBack, backLabel = "←
         <button
           type="submit"
           disabled={!values}
-          className="min-h-12 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-12 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button press disabled:cursor-not-allowed disabled:opacity-40"
         >
           운동 시작
         </button>
@@ -143,7 +143,7 @@ export default function Ready({ routine, exerciseIndex, onBack, backLabel = "←
       </form>
 
       {/* 소리 안내와 테스트 */}
-      <section className="mt-auto flex flex-col gap-3 rounded-2xl bg-surface shadow-card p-4">
+      <section className="mt-auto flex flex-col gap-3 rounded-3xl bg-surface shadow-card p-4">
         <div className="flex gap-2 text-sm text-muted">
           <span aria-hidden="true">ⓘ</span>
           <ul className="flex list-disc flex-col gap-1 pl-4">

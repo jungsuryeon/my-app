@@ -33,7 +33,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
             type="button"
             onClick={() => setSelected(null)}
             aria-label="목록으로"
-            className="-ml-2 min-h-11 min-w-11 rounded-xl px-2 text-lg"
+            className="min-h-11 min-w-11 rounded-full bg-surface px-2 text-lg shadow-card press"
           >
             ←
           </button>
@@ -45,7 +45,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
             ["부위", selected.bodyPart],
             ["기구", selected.equipment],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-2xl bg-surface shadow-card px-2 py-3">
+            <div key={k} className="rounded-3xl bg-surface shadow-card px-2 py-3">
               <dt className="text-xs text-muted">{k}</dt>
               <dd className="mt-1 font-bold">{v}</dd>
             </div>
@@ -66,7 +66,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
           <button
             type="button"
             onClick={() => onStart(makeTempRoutine(selected))}
-            className="min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
+            className="min-h-14 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button press"
           >
             이 운동으로 시작
           </button>
@@ -99,7 +99,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
               key={c.key}
               type="button"
               onClick={() => setSelected(c)}
-              className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface shadow-card px-4 py-3 text-left active:opacity-70"
+              className="flex min-h-16 flex-col items-start justify-center rounded-3xl bg-surface shadow-card px-4 py-3 text-left press active:opacity-70"
             >
               <span className="text-lg font-bold">
                 {c.name}
@@ -117,7 +117,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
         <button
           type="button"
           onClick={onOpenEditor}
-          className="sticky bottom-[calc(6.25rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent shadow-lg"
+          className="sticky bottom-[calc(6.25rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button press shadow-lg"
         >
           담은 운동 {cart.length}개 · 루틴 만들기
         </button>

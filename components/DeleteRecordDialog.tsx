@@ -39,7 +39,7 @@ export default function DeleteRecordDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 pb-8 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 px-4 pb-8 sm:items-center"
       role="presentation"
     >
       <div
@@ -66,7 +66,7 @@ export default function DeleteRecordDialog({
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="min-h-12 rounded-2xl bg-chip px-4 text-lg font-bold"
+            className="min-h-12 rounded-2xl bg-chip px-4 text-lg font-bold press"
           >
             {cancelText}
           </button>
