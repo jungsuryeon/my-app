@@ -10,7 +10,7 @@ import Progress from "@/components/Progress";
 import Ready from "@/components/Ready";
 import { useWorkout } from "@/components/useWorkout";
 import { loadSnapshot } from "@/lib/records";
-import { cloneRoutine, type Routine } from "@/lib/routines";
+import type { Routine } from "@/lib/routines";
 
 // 앱은 이 한 경로(/)의 클라이언트 컴포넌트에서 화면을 바꿔 가며 동작한다.
 // 화면은 상태로 정해진다: 세션이 없으면 홈/첫 준비 화면, 있으면 세션 상태(READY·진행·종료)에 따른 화면.
@@ -177,6 +177,10 @@ export default function Page() {
       return (
         <ExerciseSearch
           onBack={() => setShowSearch(false)}
+          onSaved={() => {
+            setShowSearch(false);
+            setNotice("내 루틴을 저장했어요.");
+          }}
           onStart={(routine) => {
             setShowSearch(false);
             setNotice(null);
@@ -194,10 +198,7 @@ export default function Page() {
       <Home
         onOpenCalendar={() => setShowCalendar(true)}
         onOpenSearch={() => setShowSearch(true)}
-        onSelectRoutine={(id) => {
-          const routine = cloneRoutine(id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
-          if (routine) setSelected(routine);
-        }}
+        onSelectRoutine={(routine) => setSelected(routine)}
       />
     );
   })();

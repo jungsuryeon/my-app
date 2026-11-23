@@ -36,7 +36,7 @@ export default function ResetDialog({ error, onCancel, onConfirm }: Props) {
           데이터 초기화
         </h2>
         <p id="reset-desc" className="text-base">
-          저장된 기록과 닉네임·진행 상태가 모두 삭제됩니다
+          저장된 기록·닉네임·진행 상태·내 루틴이 모두 삭제됩니다
         </p>
         <p className="text-sm text-muted">삭제한 데이터는 되돌릴 수 없어요.</p>
         {error && (

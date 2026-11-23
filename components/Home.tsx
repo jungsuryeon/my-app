@@ -3,16 +3,19 @@
 import { useEffect, useState } from "react";
 import { greeting, loadProfile, saveProfile, validateNickname, NICKNAME_MAX, type ProfileState } from "@/lib/profile";
 import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
-import { SAMPLE_ROUTINES } from "@/lib/routines";
+import { copyRoutine, deleteRoutine, loadMyRoutines, renameRoutine } from "@/lib/myRoutines";
+import { SAMPLE_ROUTINES, cloneRoutine, type Routine } from "@/lib/routines";
 import { clearAll } from "@/lib/storage";
+import DeleteRecordDialog from "./DeleteRecordDialog";
+import RenameRoutineDialog from "./RenameRoutineDialog";
 import ResetDialog from "./ResetDialog";
 
 /** 최근 기록 칸에 보여 줄 내용 */
 type Recent = { kind: "none" } | { kind: "line"; text: string } | { kind: "unreadable" };
 
 type Props = {
-  /** 루틴 카드를 누르면 그 루틴의 id로 호출 */
-  onSelectRoutine: (routineId: string) => void;
+  /** 루틴 카드를 누르면 그 루틴의 복사본으로 호출(시작 전 값 수정이 원본을 바꾸지 않도록) */
+  onSelectRoutine: (routine: Routine) => void;
   /** "운동 기록 보기" 버튼: 캘린더 화면으로 */
   onOpenCalendar: () => void;
   /** "운동 찾기" 버튼: 운동 검색 화면으로 */
@@ -29,6 +32,18 @@ export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: 
   const [nickError, setNickError] = useState<string | null>(null);
   // 데이터 초기화 확인창. null = 닫힘, 문자열 = 열림(값은 삭제 실패 안내, 빈 문자열이면 안내 없음)
   const [resetDialog, setResetDialog] = useState<string | null>(null);
+  // 내 루틴. null = 읽기 전, "unreadable" = 읽을 수 없음
+  const [myRoutines, setMyRoutines] = useState<Routine[] | "unreadable" | null>(null);
+  // 이름 바꾸기·삭제 창: 대상 루틴 id와 실패 안내
+  const [renaming, setRenaming] = useState<{ id: string; error: string | null } | null>(null);
+  const [deleting, setDeleting] = useState<{ id: string; error: string | null } | null>(null);
+
+  useEffect(() => {
+    // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
+    const m = loadMyRoutines();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMyRoutines(m.ok && !m.invalid ? m.routines : "unreadable");
+  }, []);
 
   useEffect(() => {
     const r = loadRecords();
@@ -77,10 +92,37 @@ export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: 
       return;
     }
     setResetDialog(null);
+    setMyRoutines([]);
     setRecent({ kind: "none" });
     setProfile({ kind: "none" }); // 닉네임을 새로 물어본다
     setNickInput("");
     setNickError(null);
+  }
+
+  const mine = Array.isArray(myRoutines) ? myRoutines : [];
+  const renameTarget = renaming ? mine.find((r) => r.id === renaming.id) : undefined;
+  const deleteTarget = deleting ? mine.find((r) => r.id === deleting.id) : undefined;
+
+  function handleRename(name: string) {
+    if (!renaming) return;
+    const r = renameRoutine(renaming.id, name);
+    if (!r.ok) {
+      setRenaming({ id: renaming.id, error: r.message });
+      return;
+    }
+    setMyRoutines(r.routines);
+    setRenaming(null);
+  }
+
+  function handleDeleteRoutine() {
+    if (!deleting) return;
+    const r = deleteRoutine(deleting.id);
+    if (!r.ok) {
+      setDeleting({ id: deleting.id, error: r.message });
+      return;
+    }
+    setMyRoutines(r.routines);
+    setDeleting(null);
   }
 
   const hello = profile?.kind === "set" ? greeting(profile.nickname) : null;
@@ -177,7 +219,10 @@ export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: 
           <button
             key={r.id}
             type="button"
-            onClick={() => onSelectRoutine(r.id)}
+            onClick={() => {
+              const routine = cloneRoutine(r.id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
+              if (routine) onSelectRoutine(routine);
+            }}
             className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70"
           >
             <span className="text-lg font-bold">{r.name}</span>
@@ -195,6 +240,48 @@ export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: 
         </button>
       </section>
 
+      {myRoutines === "unreadable" && (
+        <p role="alert" className="rounded-2xl bg-red-400/15 px-4 py-3 text-sm text-red-200">
+          저장된 내 루틴을 읽을 수 없어요.
+        </p>
+      )}
+
+      {mine.length > 0 && (
+        <section aria-labelledby="mine-title" className="flex flex-col gap-3">
+          <h2 id="mine-title" className="text-sm font-medium text-muted">
+            내 루틴
+          </h2>
+          {mine.map((r) => (
+            <div key={r.id} className="flex items-stretch gap-1 rounded-2xl bg-surface">
+              <button
+                type="button"
+                onClick={() => onSelectRoutine(copyRoutine(r))}
+                className="flex min-h-16 flex-1 flex-col items-start justify-center rounded-2xl px-4 py-3 text-left active:opacity-70"
+              >
+                <span className="text-lg font-bold">{r.name}</span>
+                <span className="text-sm text-muted">{r.exercises.map((e) => e.name).join(" · ")}</span>
+              </button>
+              <button
+                type="button"
+                aria-label={`${r.name} 이름 바꾸기`}
+                onClick={() => setRenaming({ id: r.id, error: null })}
+                className="min-h-11 min-w-11 self-center rounded-xl px-2 text-sm text-muted underline"
+              >
+                이름
+              </button>
+              <button
+                type="button"
+                aria-label={`${r.name} 삭제`}
+                onClick={() => setDeleting({ id: r.id, error: null })}
+                className="mr-1 min-h-11 min-w-11 self-center rounded-xl px-2 text-sm text-red-300 underline"
+              >
+                삭제
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
+
       <button
         type="button"
         onClick={() => setResetDialog("")}
@@ -202,6 +289,26 @@ export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: 
       >
         데이터 초기화
       </button>
+
+      {renaming && renameTarget && (
+        <RenameRoutineDialog
+          initialName={renameTarget.name}
+          error={renaming.error}
+          onCancel={() => setRenaming(null)}
+          onConfirm={handleRename}
+        />
+      )}
+
+      {deleting && deleteTarget && (
+        <DeleteRecordDialog
+          title="이 루틴을 삭제할까요?"
+          note="삭제한 루틴은 되돌릴 수 없어요. 이미 저장된 운동 기록은 그대로 남아요."
+          label={deleteTarget.name}
+          error={deleting.error}
+          onCancel={() => setDeleting(null)}
+          onConfirm={handleDeleteRoutine}
+        />
+      )}
 
       {resetDialog !== null && (
         <ResetDialog

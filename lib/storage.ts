@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   profile: "profile", // 닉네임
   snapshot: "snapshot", // 진행 중 운동 상태
   records: "records", // 저장된 운동 기록
+  routines: "routines", // 내가 만든 루틴
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
