@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useModalKeys } from "./useModalKeys";
 
 type Props = {
   /** 삭제 실패 안내. 없으면 보이지 않는다 */
@@ -14,11 +15,10 @@ type Props = {
 // 데이터 초기화 확인창. "삭제"를 눌러야만 지워진다.
 export default function ResetDialog({ error, onCancel, onConfirm }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // 열리면 "취소"에 초점을 둔다(실수로 지워지지 않도록 가장 안전한 선택)
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
+  // 열리면 "취소"에 초점을 둔다(실수로 지워지지 않도록 가장 안전한 선택). ESC는 "취소"이지 삭제가 아니다.
+  useModalKeys(dialogRef, { onEscape: onCancel, initialFocusRef: cancelRef });
 
   return (
     <div
@@ -26,6 +26,7 @@ export default function ResetDialog({ error, onCancel, onConfirm }: Props) {
       role="presentation"
     >
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="reset-title"

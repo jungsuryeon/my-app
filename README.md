@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RepTimer
 
-## Getting Started
+헬스장에서 **반복·세트·휴식을 자동으로 진행**하고, 이어폰으로 **비프음과 한국어 음성**을 들려주는 모바일 운동 타이머 웹앱입니다.
 
-First, run the development server:
+- 배포 주소: https://my-app-nine-ashen.vercel.app/
+- 저장소: https://github.com/jungsuryeon/my-app
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 1. 프로젝트 소개와 개발 목적
+
+운동 중에는 폰 화면을 계속 보며 세트 수를 세고 휴식 시간을 재기가 번거롭습니다. RepTimer는 운동 값(반복·세트·휴식·템포)을 정해 두고 시작하면 **화면을 만지지 않아도** 운동 → 휴식 → 다음 세트로 자동으로 넘어가고, 이어폰의 소리만으로 진행 상황을 알려 줍니다.
+
+회원가입·서버·데이터베이스 없이 **브라우저의 localStorage에만** 저장하는 개인용 앱입니다. 외부 AI API는 쓰지 않습니다.
+
+## 2. 주요 기능
+
+**운동 타이머 (핵심)**
+- 반복 → 세트 → 휴식 → 다음 운동까지 자동 진행. 시작 전 3초 카운트다운
+- 반복 숫자를 화면 중앙에 크게 표시, 일시정지·이어하기, 현재 세트 건너뛰기, 전체 종료
+- 소리 안내: 템포마다 한국어 숫자 음성("하나, 둘, 셋…"), 휴식 끝 3·2·1초 전 비프, 세트 완료·운동 전환 음성. 한국어 음성을 쓸 수 없으면 비프음으로 대신 안내
+- 화면이 꺼지거나 다른 앱으로 가면 자동 일시정지, 돌아오면 **이어하기**로 계속(벗어난 시간은 운동 시간에 넣지 않음)
+- 운동 중 **새로고침해도 복원**(30분 안), 가능한 기기에서는 화면 꺼짐 방지(Wake Lock)
+
+**루틴과 기록**
+- 기본 루틴 2개(상체 데이·하체 데이)와 **내 루틴 만들기·수정·삭제**
+- 운동 후 반복 수를 −/+로 고쳐 **기록 저장**, 홈의 최근 기록
+- **운동 기록 캘린더**: 날짜별 기록 조회·삭제, 월간 운동한 날·횟수·예상 칼로리
+- 체중을 입력하면 **예상 소모 칼로리** 표시(추정값)
+
+**운동 찾기**
+- 한국어 운동 목록(38개)을 이름, 상체/하체, 세부 부위, 기구로 검색
+- 운동 설명에서 **동작 GIF** 보기(ExerciseDB). 못 불러와도 운동은 그대로 시작할 수 있고, 안내 문구가 나옴
+
+**화면과 접근성**
+- 크림·파스텔 디자인, 홈의 캐릭터와 가벼운 모션(움직임 줄이기 설정을 켜면 모션 정지)
+- 모달(설정·삭제·초기화·종료 확인)은 키보드로 조작 가능: 열면 안으로 포커스, Tab 순환, ESC 처리(삭제·초기화는 ESC가 "취소"), 닫으면 포커스 복귀
+- 사용자가 필요하면 핀치로 화면 확대 가능
+
+## 3. 사용 기술과 프로젝트 구조
+
+| 구분 | 내용 |
+|---|---|
+| 프레임워크 | Next.js 16 (App Router), React 19, TypeScript |
+| 스타일 | Tailwind CSS 4 (외부 UI·3D 라이브러리 없음) |
+| 소리 | Web Audio API(비프), Web Speech API(한국어 음성) |
+| 저장 | 브라우저 localStorage (키 접두사 `reptimer:`) |
+| 테스트 | Vitest (화면 없는 로직 위주) |
+| 외부 서비스 | ExerciseDB 무료 API(동작 GIF 조회만) |
+| 배포 | Vercel |
+
+```
+app/            한 경로(/)의 화면 틀, 전역 스타일, 운동 GIF 조회 API(app/api/exercise)
+components/     화면 컴포넌트(홈·진행·준비·종료·캘린더·루틴 편집·설정·모달 등)와 운동 진행 훅
+lib/            화면과 무관한 로직: 타이머, 상태 머신, 세션, 소리 우선순위, 저장, 기록, 루틴, 캘린더, 칼로리
+public/mascot/  캐릭터·일러스트 이미지(WebP)
+PRD.md          기획서(기능·규칙의 기준)
+DESIGN.md       설계 문서
+PLAN.md         개발 계획
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+앱은 한 경로의 클라이언트 컴포넌트에서 화면을 바꿔 가며 동작합니다. 타이머는 "시작 시각 + 누적 시간"으로 계산해서 화면이 멈춰도 시간이 어긋나지 않게 했습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 4. 설치와 로컬 실행
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Node.js와 npm이 필요합니다(개발은 Node 22에서 했습니다).
 
-## Learn More
+```bash
+git clone https://github.com/jungsuryeon/my-app.git
+cd my-app
+npm install
+npm run dev      # http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+| 명령 | 설명 |
+|---|---|
+| `npm run dev` | 개발 서버 |
+| `npm run build` | 프로덕션 빌드 |
+| `npm start` | 빌드한 앱 실행 |
+| `npm run lint` | ESLint 검사 |
+| `npm test` | Vitest 실행 |
+| `npx tsc --noEmit` | 타입 검사 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+환경 변수 없이 실행됩니다. 개발용 `.env`(배포 토큰 등)는 저장소에 올리지 않으며, 앱 코드는 `.env`를 읽지 않습니다. 소리는 브라우저 정책상 **버튼을 누른 뒤에** 켜지므로, "운동 시작"을 눌러야 들립니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 5. 운동 타이머 사용 방법
 
-## Deploy on Vercel
+1. 홈에서 루틴을 고릅니다(기본 루틴 또는 내 루틴). 운동 찾기에서 운동 하나를 골라 바로 시작할 수도 있습니다.
+2. 준비 화면에서 반복·세트·휴식·템포·무게(선택)를 확인하거나 이번 운동에 한해 고칩니다. 처음이면 **소리 테스트**로 이어폰 소리를 확인합니다.
+3. **운동 시작**을 누르면 3초 카운트다운 뒤 자동으로 진행됩니다. 이후에는 화면을 만질 필요가 없습니다.
+4. 필요하면 일시정지·이어하기, 건너뛰기, 전체 종료를 누릅니다. 전체 종료는 확인창에서 "계속하기 / 저장 후 종료 / 저장 안 하고 종료" 중에서 고릅니다.
+5. 운동이 끝나면 종료 화면에서 세트별 반복 수를 −/+로 고치고 **기록 저장**을 누릅니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+아이폰은 무음 스위치나 이어폰 연결이 끊기면 소리가 나지 않거나 폰 스피커로 나올 수 있습니다. 운동 중에는 화면을 켜 두세요.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 6. 사용자 루틴과 운동 기록
+
+- **내 루틴**: 홈의 "+ 루틴 만들기" 또는 운동 찾기에서 담은 운동으로 만듭니다. 이름(최대 12글자), 운동 추가·순서 변경·빼기, 운동별 반복(1~50)·세트(1~10)·휴식(10~600초)·템포(1~10초)·무게를 정해 저장합니다. 루틴은 최대 20개, 한 루틴에 운동 10개까지입니다. 홈에서 시작·수정·삭제할 수 있습니다.
+- **기본 루틴**: 처음에 쓸지 한 번 묻고, "숨기기"로 숨기거나 설정에서 다시 켤 수 있습니다.
+- **운동 기록**: 운동을 끝내고 저장한 기록이 쌓이고, 운동 기록 탭의 달력에서 날짜를 눌러 그날의 기록(운동별 세트·반복·시간·예상 칼로리)을 보고 삭제할 수 있습니다.
+- **설정(톱니)**: 닉네임, 체중, 기본 루틴 보이기를 정하고, **데이터 초기화**(확인창 거침)로 이 폰의 저장 데이터를 모두 지울 수 있습니다.
+- 모든 데이터는 이 기기의 브라우저에만 저장됩니다. 브라우저 데이터를 지우거나 다른 기기로 옮기면 사라집니다(백업·복원 기능은 아직 없습니다).
+
+## 7. 배포
+
+Vercel에 배포했습니다: https://my-app-nine-ashen.vercel.app/
+
+## 8. 향후 개선 계획
+
+아래는 **아직 구현하지 않은** 항목입니다.
+
+- iPhone Safari·Android Chrome **실기기 검증**과 모바일 사용성 개선(점검표 `iPhone-점검표.md`가 있으나 실기기 결과는 아직 채우지 못했습니다. 소리·화면 꺼짐·백그라운드 동작은 실기기에서 확인되지 않은 상태입니다)
+- 기록·루틴 **백업/복원**(JSON 내보내기·가져오기)
+- 이전에 쓴 무게 자동 입력
+- 터치했을 때 표정이 바뀌는 캐릭터 이미지, 이미지 출처·이용 조건 기록
+- 설계 문서(`DESIGN.md`)를 최근 추가 기능(캘린더, 루틴 만들기, GIF, 칼로리 등)에 맞게 갱신
+- 일시정지 화면 안내, 기록 손상 시 안내 등 예외 처리 보강

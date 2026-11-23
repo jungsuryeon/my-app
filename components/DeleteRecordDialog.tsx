@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useModalKeys } from "./useModalKeys";
 
 type Props = {
   /** 무엇을 지우는지 보여 주는 한 줄(예: "11월 3일 · 상체 데이") */
@@ -31,11 +32,10 @@ export default function DeleteRecordDialog({
   onConfirm,
 }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // 열리면 "취소"에 초점을 둔다(실수로 지워지지 않도록 가장 안전한 선택)
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
+  // 열리면 "취소"에 초점을 둔다(실수로 지워지지 않도록 가장 안전한 선택). ESC는 "취소"이지 삭제가 아니다.
+  useModalKeys(dialogRef, { onEscape: onCancel, initialFocusRef: cancelRef });
 
   return (
     <div
@@ -43,6 +43,7 @@ export default function DeleteRecordDialog({
       role="presentation"
     >
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="del-title"

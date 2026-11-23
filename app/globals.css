@@ -149,6 +149,14 @@ body {
   .confetti { animation: rt-confetti 1.6s ease-out backwards; animation-delay: var(--d, 0s); }
 }
 
+/* 버튼을 빠르게 두 번 눌러도 더블탭 확대·지연이 생기지 않게 한다(스크롤과 핀치 확대는 그대로 가능) */
+button,
+a,
+summary,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 /* 입력창은 16px 이상이어야 iPhone이 자동 확대하지 않는다 */
 input,
 select,

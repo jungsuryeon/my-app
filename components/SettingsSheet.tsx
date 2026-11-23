@@ -6,6 +6,7 @@ import { loadPrefs, savePrefs, showDefaultRoutines, type PrefsState } from "@/li
 import { NICKNAME_MAX, loadProfile, saveProfile, validateNickname, type ProfileState } from "@/lib/profile";
 import { clearAll } from "@/lib/storage";
 import ResetDialog from "./ResetDialog";
+import { useModalKeys } from "./useModalKeys";
 
 type Props = {
   onClose: () => void;
@@ -30,6 +31,10 @@ export default function SettingsSheet({ onClose, onProfileChange, onPrefsChange,
   // 데이터 초기화 확인창: null = 닫힘, 문자열 = 열림(값은 실패 안내, 빈 문자열이면 안내 없음)
   const [resetDialog, setResetDialog] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // 열리면 닫기 버튼에 초점, Tab은 시트 안에서만 돈다. ESC는 시트를 닫는다(초기화 확인창이 위에 있으면 그 창만 반응).
+  useModalKeys(dialogRef, { onEscape: onClose, initialFocusRef: closeRef });
 
   useEffect(() => {
     // 저장소 값을 한 번 상태로 옮기는 것이라 effect 안에서 상태를 바꿀 수밖에 없다(PRD: 화면이 그려진 뒤에 읽는다)
@@ -40,7 +45,6 @@ export default function SettingsSheet({ onClose, onProfileChange, onPrefsChange,
     setBody(loadBody());
     setPrefs(loadPrefs());
     /* eslint-enable react-hooks/set-state-in-effect */
-    closeRef.current?.focus();
   }, []);
 
   const nickname = profile?.kind === "set" ? profile.nickname : null;
@@ -129,6 +133,7 @@ export default function SettingsSheet({ onClose, onProfileChange, onPrefsChange,
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"

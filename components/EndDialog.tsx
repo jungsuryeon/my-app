@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useModalKeys } from "./useModalKeys";
 
 type Props = {
   /** 계속하기: 창을 닫고 누르기 전 상태로 돌아간다 */
@@ -14,11 +15,11 @@ type Props = {
 // 전체 종료 확인창. 화면 전체를 덮고, 세 버튼 중 하나를 골라야 닫힌다.
 export default function EndDialog({ onContinue, onSaveAndEnd, onDiscard }: Props) {
   const firstRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // 열리면 "계속하기"에 초점을 둔다(실수로 종료되지 않도록 가장 안전한 선택)
-  useEffect(() => {
-    firstRef.current?.focus();
-  }, []);
+  // 열리면 "계속하기"에 초점을 둔다(실수로 종료되지 않도록 가장 안전한 선택). Tab은 창 안에서만 돌고,
+  // ESC는 "계속하기"와 같다(종료·저장은 하지 않는다. 일시정지 중이었다면 일시정지 상태 그대로).
+  useModalKeys(dialogRef, { onEscape: onContinue, initialFocusRef: firstRef });
 
   return (
     <div
@@ -26,6 +27,7 @@ export default function EndDialog({ onContinue, onSaveAndEnd, onDiscard }: Props
       role="presentation"
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="end-title"
