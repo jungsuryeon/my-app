@@ -215,6 +215,7 @@ export default function Page() {
     return (
       <Home
         onSelectRoutine={(routine) => setSelected(routine)}
+        onGoTab={setTab}
         onCreateRoutine={() => setEditor({ id: null, name: "", exercises: [] })}
         onEditRoutine={(routine) => setEditor({ id: routine.id, name: routine.name, exercises: routine.exercises })}
       />

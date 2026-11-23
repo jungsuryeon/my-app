@@ -19,6 +19,10 @@
   --peach: #ffd2bd; /* 살구(초기화 등 주의 버튼) */
   --peach-ink: #a1481f;
 
+  --card-mint: #d3f0e2; /* 상체 카드 */
+  --card-lavender: #e7ddfb; /* 하체 카드 */
+  --card-peach: #ffe3d6;
+
   --chip: rgba(45, 42, 62, 0.07); /* 보조 버튼·칩 바탕 */
   --chip-strong: rgba(45, 42, 62, 0.13);
   --line: rgba(45, 42, 62, 0.1);
@@ -45,6 +49,9 @@
   --color-lavender-ink: var(--lavender-ink);
   --color-peach: var(--peach);
   --color-peach-ink: var(--peach-ink);
+  --color-card-mint: var(--card-mint);
+  --color-card-lavender: var(--card-lavender);
+  --color-card-peach: var(--card-peach);
   --color-chip: var(--chip);
   --color-chip-strong: var(--chip-strong);
   --color-line: var(--line);

@@ -176,7 +176,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
         <button
           type="button"
           onClick={onOpenEditor}
-          className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent shadow-lg"
+          className="sticky bottom-[calc(6.25rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent shadow-lg"
         >
           담은 운동 {cart.length}개 · 루틴 만들기
         </button>

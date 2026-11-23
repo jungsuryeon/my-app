@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { greeting, loadProfile, saveProfile, validateNickname, NICKNAME_MAX, type ProfileState } from "@/lib/profile";
-import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
+import { useEffect, useState, type ReactNode } from "react";
 import { copyRoutine, deleteRoutine, loadMyRoutines } from "@/lib/myRoutines";
-import { SAMPLE_ROUTINES, cloneRoutine, type Routine } from "@/lib/routines";
-import { WEIGHT_LIMITS, loadBody, saveBody, validateWeight, weightOf, type BodyState } from "@/lib/body";
 import { loadPrefs, savePrefs, showDefaultRoutines, type PrefsState } from "@/lib/prefs";
-import { clearAll } from "@/lib/storage";
+import { NICKNAME_MAX, greeting, loadProfile, saveProfile, validateNickname, type ProfileState } from "@/lib/profile";
+import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
+import { SAMPLE_ROUTINES, cloneRoutine, type Routine } from "@/lib/routines";
+import AssetImage, { DumbbellIcon, SoftBlob } from "./AssetImage";
 import DeleteRecordDialog from "./DeleteRecordDialog";
-import ResetDialog from "./ResetDialog";
+import Mascot from "./Mascot";
+import SettingsSheet from "./SettingsSheet";
+import type { Tab } from "./TabBar";
 
 /** 최근 기록 칸에 보여 줄 내용 */
 type Recent = { kind: "none" } | { kind: "line"; text: string } | { kind: "unreadable" };
@@ -21,71 +22,108 @@ type Props = {
   onCreateRoutine: () => void;
   /** 내 루틴의 "수정" 버튼 */
   onEditRoutine: (routine: Routine) => void;
+  /** "운동 캘린더 보기"·"운동 찾기" 바로가기: 해당 탭으로 */
+  onGoTab: (tab: Tab) => void;
 };
 
-// 홈 탭. 닉네임, 최근 기록, 기본 루틴, 내 루틴, 데이터 초기화를 보여 준다(캘린더·운동 찾기는 하단 탭으로 간다).
-export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }: Props) {
+/** 기본 루틴 카드 색: 상체 = 민트, 하체 = 라벤더 */
+const DEFAULT_STYLE: Record<string, { card: string; play: string; art: string; tone: "mint" | "lavender" }> = {
+  upper: { card: "bg-card-mint", play: "text-accent-ink", art: "/mascot/routine-upper.webp", tone: "mint" },
+  lower: { card: "bg-card-lavender", play: "text-lavender-ink", art: "/mascot/routine-lower.webp", tone: "lavender" },
+};
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
+      <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </svg>
+  );
+}
+
+/** 일러스트 자리(에셋이 없으면 파스텔 도형) */
+function RoutineArt({ src, tone }: { src: string; tone: "mint" | "lavender" | "peach" }) {
+  return (
+    <AssetImage
+      src={src}
+      alt=""
+      width={84}
+      fallback={
+        <SoftBlob tone={tone}>
+          <DumbbellIcon className="h-1/2 w-1/2 text-on-accent" />
+        </SoftBlob>
+      }
+    />
+  );
+}
+
+function SectionTitle({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 text-lg font-bold">
+      {icon}
+      {children}
+    </div>
+  );
+}
+
+// 홈 탭: 로고·캐릭터, 최근 기록, 기본 루틴·내 루틴, 바로가기. 닉네임·체중·기본 루틴 보이기·초기화는 톱니 설정 시트에 있다.
+export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, onGoTab }: Props) {
   // 처음 그릴 때는 기록이 없는 것으로 두고(서버 화면과 같게), 그려진 뒤에 저장소에서 읽는다
   const [recent, setRecent] = useState<Recent>({ kind: "none" });
   // 닉네임 상태. null = 아직 읽기 전(입력 카드가 번쩍 보였다 사라지지 않게 읽기 전에는 아무것도 안 보인다)
   const [profile, setProfile] = useState<ProfileState | null>(null);
   const [nickInput, setNickInput] = useState("");
   const [nickError, setNickError] = useState<string | null>(null);
-  // 데이터 초기화 확인창. null = 닫힘, 문자열 = 열림(값은 삭제 실패 안내, 빈 문자열이면 안내 없음)
-  const [resetDialog, setResetDialog] = useState<string | null>(null);
   // 내 루틴. null = 읽기 전, "unreadable" = 읽을 수 없음
   const [myRoutines, setMyRoutines] = useState<Routine[] | "unreadable" | null>(null);
   // 삭제 확인창: 대상 루틴 id와 실패 안내
   const [deleting, setDeleting] = useState<{ id: string; error: string | null } | null>(null);
-
   // 기본 루틴을 보일지 정한 설정. null = 읽기 전
   const [prefs, setPrefs] = useState<PrefsState | null>(null);
-  // "기본 루틴 숨기기" 확인창
-  const [hideDialog, setHideDialog] = useState(false);
-  // 체중(칼로리 계산용, 선택). null = 읽기 전
-  const [body, setBody] = useState<BodyState | null>(null);
-  const [weightInput, setWeightInput] = useState("");
-  const [weightError, setWeightError] = useState<string | null>(null);
-  const [editingWeight, setEditingWeight] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // 저장소 값은 화면이 그려진 뒤(useEffect)에만 읽고, 한 번 상태로 옮기는 것이라 effect 안에서 상태를 바꾼다(PRD)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setBody(loadBody());
-  }, []);
-
-  useEffect(() => {
-    // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrefs(loadPrefs());
-  }, []);
-
-  useEffect(() => {
-    // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
+    setProfile(loadProfile());
     const m = loadMyRoutines();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMyRoutines(m.ok && !m.invalid ? m.routines : "unreadable");
-  }, []);
-
-  useEffect(() => {
     const r = loadRecords();
-    // PRD: localStorage는 화면이 그려진 뒤(useEffect)에만 읽는다. 저장소 값을 한 번 상태로 옮기는 것이라
-    // effect 안에서 상태를 바꿀 수밖에 없다(홈이 나타날 때마다 한 번 실행).
-    /* eslint-disable react-hooks/set-state-in-effect */
     if (!r.ok || r.invalid) {
       setRecent({ kind: "unreadable" });
       return;
     }
     const latest = latestRecord(r.records);
     setRecent(latest ? { kind: "line", text: formatRecordLine(latest) } : { kind: "none" });
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
-
-  useEffect(() => {
-    // 위와 같은 이유로 effect 안에서 저장소 값을 상태로 옮긴다
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProfile(loadProfile());
-  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSaveNickname() {
     const v = validateNickname(nickInput);
@@ -106,61 +144,20 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
     setProfile({ kind: "set", nickname: null });
   }
 
-  /** 확인창에서 "삭제"를 눌렀을 때: 이 앱의 저장 데이터를 모두 지우고 화면을 처음 상태로 되돌린다 */
-  function handleReset() {
-    const r = clearAll();
-    if (!r.ok) {
-      setResetDialog("삭제하지 못했어요. 브라우저 설정을 확인한 뒤 다시 시도해 주세요.");
-      return;
-    }
-    setResetDialog(null);
+  /** 설정 시트에서 데이터 초기화가 끝났을 때: 화면을 처음 상태로 되돌린다 */
+  function handleResetDone() {
     setMyRoutines([]);
-    setPrefs({ kind: "none" }); // 처음 상태로: 기본 루틴을 다시 보여 주고 한 번 더 묻는다
-    setBody({ kind: "none" });
-    setWeightInput("");
-    setWeightError(null);
-    setEditingWeight(false);
+    setPrefs({ kind: "none" }); // 기본 루틴을 다시 보여 주고 한 번 더 묻는다
     setRecent({ kind: "none" });
     setProfile({ kind: "none" }); // 닉네임을 새로 물어본다
     setNickInput("");
     setNickError(null);
   }
 
-  /** 체중 저장: 20~300kg 검사 후 저장한다. 실패하면 이유를 알린다 */
-  function handleSaveWeight() {
-    const v = validateWeight(weightInput);
-    if (!v.ok) {
-      setWeightError(v.error);
-      return;
-    }
-    if (!saveBody(v.weightKg)) {
-      setWeightError("저장하지 못했어요. 다시 시도해 주세요.");
-      return;
-    }
-    setWeightError(null);
-    setBody({ kind: "set", weightKg: v.weightKg });
-    setEditingWeight(false);
-  }
-
-  /** 체중 지우기: 칼로리 계산을 멈춘다(이미 저장된 기록의 칼로리는 그대로) */
-  function handleClearWeight() {
-    if (!saveBody(null)) {
-      setWeightError("지우지 못했어요. 다시 시도해 주세요.");
-      return;
-    }
-    setWeightError(null);
-    setBody({ kind: "set", weightKg: null });
-    setWeightInput("");
-    setEditingWeight(false);
-  }
-
-  const savedWeight = weightOf(body);
-
   /** 기본 루틴 보기 선택을 저장한다(저장에 실패해도 이번 화면에는 바로 반영한다) */
   function chooseDefaults(choice: "show" | "hide") {
     savePrefs({ defaultRoutines: choice });
     setPrefs({ kind: "set", prefs: { defaultRoutines: choice } });
-    setHideDialog(false);
   }
 
   const defaultsVisible = showDefaultRoutines(prefs);
@@ -184,20 +181,55 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
   const hello = profile?.kind === "set" ? greeting(profile.nickname) : null;
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-6">
-      <header>
-        <h1 className="text-2xl font-bold">RepTimer</h1>
-        {hello && <p className="mt-1 text-lg">{hello}</p>}
-        <p className="mt-1 text-sm text-muted">
-          반복·세트·휴식을 자동으로 진행해 드려요.
-        </p>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-5">
+      {/* 상단: 로고 + 문구 + 설정 + 캐릭터 */}
+      <header className="relative">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-6 top-6 h-44 w-44 rounded-full bg-lavender/50" />
+        <div aria-hidden="true" className="pointer-events-none absolute -left-8 top-28 h-24 w-40 rounded-full bg-peach/50" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <AssetImage
+                src="/mascot/logo-dumbbell.webp"
+                alt=""
+                width={44}
+                fallback={
+                  <span className="flex h-full w-full items-center justify-center rounded-2xl bg-accent/70 text-on-accent">
+                    <DumbbellIcon className="h-3/5 w-3/5" />
+                  </span>
+                }
+              />
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                Rep<span className="text-accent-ink">Timer</span>
+              </h1>
+            </div>
+            {hello && <p className="mt-1 text-lg font-medium">{hello}</p>}
+            <p className="mt-1 text-sm text-muted">반복·세트·휴식을 자동으로 진행해 드려요.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="설정"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-2xl bg-surface text-muted shadow-card active:opacity-70"
+          >
+            <GearIcon />
+          </button>
+        </div>
+        <div className="relative mt-3 flex items-end justify-between">
+          <p className="mb-8 rounded-3xl rounded-bl-md bg-lavender px-5 py-3 text-lg font-bold leading-snug text-lavender-ink shadow-card">
+            오늘도
+            <br />
+            운동 시작!
+          </p>
+          <Mascot size={176} />
+        </div>
       </header>
 
       {/* 첫 실행: 닉네임 입력(선택). 건너뛰기를 누르면 다시 묻지 않는다 */}
       {profile?.kind === "none" && (
         <form
           aria-labelledby="nick-title"
-          className="flex flex-col gap-3 rounded-2xl bg-surface shadow-card p-4"
+          className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card"
           onSubmit={(e) => {
             e.preventDefault();
             handleSaveNickname();
@@ -230,131 +262,34 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
             </p>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={handleSkipNickname}
-              className="min-h-11 rounded-xl bg-chip px-4"
-            >
+            <button type="button" onClick={handleSkipNickname} className="min-h-11 rounded-xl bg-chip px-4">
               건너뛰기
             </button>
-            <button
-              type="submit"
-              className="min-h-11 rounded-xl bg-accent px-4 font-bold text-on-accent"
-            >
+            <button type="submit" className="min-h-11 rounded-xl bg-accent px-4 font-bold text-on-accent shadow-button">
               저장
             </button>
           </div>
         </form>
       )}
 
-      <section aria-labelledby="recent-title" className="rounded-2xl bg-surface shadow-card p-4">
-        <h2 id="recent-title" className="text-sm font-medium text-muted">
-          최근 기록
-        </h2>
-        <p className="mt-2 text-base">
-          {recent.kind === "line"
-            ? recent.text
-            : recent.kind === "unreadable"
-              ? "저장된 기록을 읽을 수 없어요"
-              : "아직 기록이 없습니다"}
-        </p>
-      </section>
-
-      {/* 체중(선택): 입력하면 종료 화면·기록에 예상 소모 칼로리를 보여 준다 */}
-      {body !== null && (
-        <section aria-labelledby="weight-title" className="rounded-2xl bg-surface shadow-card p-4">
-          <h2 id="weight-title" className="text-sm font-medium text-muted">
-            체중 <span className="font-normal">(선택 · 칼로리 계산용)</span>
-          </h2>
-          {savedWeight !== null && !editingWeight ? (
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="text-lg font-bold">{savedWeight}kg</p>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWeightInput(String(savedWeight));
-                    setEditingWeight(true);
-                  }}
-                  className="min-h-11 rounded-xl px-3 text-sm text-muted underline"
-                >
-                  바꾸기
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearWeight}
-                  className="min-h-11 rounded-xl px-3 text-sm text-danger underline"
-                >
-                  지우기
-                </button>
-              </div>
-            </div>
-          ) : (
-            <form
-              className="mt-2 flex flex-col gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSaveWeight();
-              }}
-            >
-              <label htmlFor="weight" className="sr-only">
-                체중(kg)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="weight"
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  value={weightInput}
-                  onChange={(e) => setWeightInput(e.target.value)}
-                  aria-invalid={weightError ? true : undefined}
-                  placeholder={`${WEIGHT_LIMITS.min}~${WEIGHT_LIMITS.max}`}
-                  className={`min-h-11 w-full rounded-xl bg-background px-3 text-base outline-none focus:ring-2 ${
-                    weightError ? "ring-2 ring-red-400" : "focus:ring-accent"
-                  }`}
-                />
-                <span className="text-sm text-muted">kg</span>
-                <button type="submit" className="min-h-11 shrink-0 rounded-xl bg-accent px-4 font-bold text-on-accent">
-                  저장
-                </button>
-              </div>
-              {weightError && (
-                <p role="alert" className="text-sm text-danger">
-                  {weightError}
-                </p>
-              )}
-              <p className="text-xs text-muted">
-                이 폰에만 저장되고 서버로 보내지 않아요. 입력하지 않아도 모든 기능을 쓸 수 있어요. 칼로리는 참고용
-                추정값이에요.
-              </p>
-            </form>
-          )}
-        </section>
-      )}
-
       {/* 처음 한 번: 기본 루틴을 쓸지 묻는다 */}
       {askDefaults && (
-        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-2xl bg-surface shadow-card p-4">
+        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
           <h2 id="defaults-title" className="text-base font-bold">
             기본 루틴을 쓸까요?
           </h2>
           <p className="text-sm text-muted">
-            상체 데이·하체 데이는 바로 써 볼 수 있는 예시 루틴이에요. 내 루틴만 쓰려면 숨길 수 있고, 나중에 홈에서
-            다시 볼 수 있어요.
+            상체 데이·하체 데이는 바로 써 볼 수 있는 예시 루틴이에요. 내 루틴만 쓰려면 숨길 수 있고, 나중에 설정(톱니)
+            에서 다시 볼 수 있어요.
           </p>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => chooseDefaults("hide")}
-              className="min-h-11 rounded-xl bg-chip px-3"
-            >
+            <button type="button" onClick={() => chooseDefaults("hide")} className="min-h-11 rounded-xl bg-chip px-3">
               내 루틴만 쓸게요
             </button>
             <button
               type="button"
               onClick={() => chooseDefaults("show")}
-              className="min-h-11 rounded-xl bg-accent px-3 font-bold text-on-accent"
+              className="min-h-11 rounded-xl bg-accent px-3 font-bold text-on-accent shadow-button"
             >
               기본 루틴 쓸게요
             </button>
@@ -362,39 +297,94 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
         </section>
       )}
 
+      {/* 최근 기록 */}
+      <section aria-labelledby="recent-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
+        <h2 id="recent-title" className="flex items-center gap-2 text-lg font-bold">
+          <span className="text-accent-ink">
+            <CalendarIcon />
+          </span>
+          최근 기록
+        </h2>
+        {recent.kind === "line" ? (
+          <p className="rounded-2xl bg-background px-4 py-3 text-base">{recent.text}</p>
+        ) : recent.kind === "unreadable" ? (
+          <p className="rounded-2xl bg-danger-soft px-4 py-3 text-base text-danger">저장된 기록을 읽을 수 없어요</p>
+        ) : (
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-line px-4 py-3">
+            <AssetImage
+              src="/mascot/empty-record.webp"
+              alt=""
+              width={56}
+              fallback={
+                <SoftBlob tone="peach">
+                  <DumbbellIcon className="h-1/2 w-1/2 text-peach-ink" />
+                </SoftBlob>
+              }
+            />
+            <p className="text-base text-muted">아직 기록이 없습니다</p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => onGoTab("records")}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-base font-bold text-on-accent shadow-button active:opacity-80"
+        >
+          <CalendarIcon />
+          운동 캘린더 보기
+          <span aria-hidden="true">›</span>
+        </button>
+      </section>
+
+      {/* 루틴 */}
+      <div className="flex items-center justify-between gap-3">
+        <SectionTitle
+          icon={
+            <span className="text-lavender-ink">
+              <DumbbellIcon className="h-6 w-6" />
+            </span>
+          }
+        >
+          루틴
+        </SectionTitle>
+        <button
+          type="button"
+          onClick={onCreateRoutine}
+          className="min-h-11 rounded-full bg-lavender px-4 text-base font-bold text-lavender-ink shadow-card active:opacity-80"
+        >
+          + 루틴 만들기
+        </button>
+      </div>
+
       {defaultsVisible && (
-      <section aria-labelledby="routine-title" className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 id="routine-title" className="text-sm font-medium text-muted">
+        <section aria-labelledby="routine-title" className="flex flex-col gap-3">
+          <h2 id="routine-title" className="sr-only">
             기본 루틴
           </h2>
-          {!askDefaults && (
-            <button
-              type="button"
-              onClick={() => setHideDialog(true)}
-              className="-mr-2 min-h-11 rounded-xl px-2 text-sm text-muted underline"
-            >
-              숨기기
-            </button>
-          )}
-        </div>
-        {SAMPLE_ROUTINES.map((r) => (
-          <button
-            key={r.id}
-            type="button"
-            onClick={() => {
-              const routine = cloneRoutine(r.id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
-              if (routine) onSelectRoutine(routine);
-            }}
-            className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface shadow-card px-4 py-3 text-left active:opacity-70"
-          >
-            <span className="text-lg font-bold">{r.name}</span>
-            <span className="text-sm text-muted">
-              {r.exercises.map((e) => e.name).join(" · ")}
-            </span>
-          </button>
-        ))}
-      </section>
+          {SAMPLE_ROUTINES.map((r) => {
+            const s = DEFAULT_STYLE[r.id] ?? DEFAULT_STYLE.upper;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => {
+                  const routine = cloneRoutine(r.id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
+                  if (routine) onSelectRoutine(routine);
+                }}
+                aria-label={`${r.name} 시작`}
+                className={`flex min-h-[7rem] items-center gap-3 rounded-3xl ${s.card} p-4 text-left shadow-card active:opacity-80`}
+              >
+                <RoutineArt src={s.art} tone={s.tone} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xl font-bold">{r.name}</span>
+                  <span className="mt-1 block text-sm text-muted">{r.exercises.map((e) => e.name).join(" · ")}</span>
+                </span>
+                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full bg-surface shadow-card ${s.play}`}>
+                  <PlayIcon />
+                </span>
+              </button>
+            );
+          })}
+        </section>
       )}
 
       {myRoutines === "unreadable" && (
@@ -408,23 +398,29 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
           내 루틴
         </h2>
         {mine.length === 0 && myRoutines !== "unreadable" && (
-          <p className="text-sm text-muted">아직 만든 루틴이 없어요. 아래 버튼으로 나만의 루틴을 만들어 보세요.</p>
+          <p className="rounded-2xl border-2 border-dashed border-line px-4 py-3 text-sm text-muted">
+            아직 만든 루틴이 없어요. 위의 &quot;+ 루틴 만들기&quot;로 나만의 루틴을 만들어 보세요.
+          </p>
         )}
         {mine.map((r) => (
-            <div key={r.id} className="flex items-stretch gap-1 rounded-2xl bg-surface shadow-card">
-              <button
-                type="button"
-                onClick={() => onSelectRoutine(copyRoutine(r))}
-                className="flex min-h-16 flex-1 flex-col items-start justify-center rounded-2xl px-4 py-3 text-left active:opacity-70"
-              >
-                <span className="text-lg font-bold">{r.name}</span>
-                <span className="text-sm text-muted">{r.exercises.map((e) => e.name).join(" · ")}</span>
-              </button>
+          <div key={r.id} className="flex items-stretch gap-1 rounded-3xl bg-card-peach shadow-card">
+            <button
+              type="button"
+              onClick={() => onSelectRoutine(copyRoutine(r))}
+              className="flex min-h-[5.5rem] min-w-0 flex-1 items-center gap-3 rounded-3xl px-4 py-3 text-left active:opacity-80"
+            >
+              <RoutineArt src="/mascot/routine-custom.webp" tone="peach" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-lg font-bold">{r.name}</span>
+                <span className="block truncate text-sm text-muted">{r.exercises.map((e) => e.name).join(" · ")}</span>
+              </span>
+            </button>
+            <div className="flex flex-col justify-center pr-1">
               <button
                 type="button"
                 aria-label={`${r.name} 수정`}
                 onClick={() => onEditRoutine(copyRoutine(r))}
-                className="min-h-11 min-w-11 self-center rounded-xl px-2 text-sm text-muted underline"
+                className="min-h-11 min-w-11 rounded-xl px-2 text-sm text-muted underline"
               >
                 수정
               </button>
@@ -432,48 +428,30 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
                 type="button"
                 aria-label={`${r.name} 삭제`}
                 onClick={() => setDeleting({ id: r.id, error: null })}
-                className="mr-1 min-h-11 min-w-11 self-center rounded-xl px-2 text-sm text-danger underline"
+                className="min-h-11 min-w-11 rounded-xl px-2 text-sm text-danger underline"
               >
                 삭제
               </button>
             </div>
-          ))}
-        <button
-          type="button"
-          onClick={onCreateRoutine}
-          className="min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
-        >
-          + 루틴 만들기
-        </button>
+          </div>
+        ))}
       </section>
-
-      {!defaultsVisible && (
-        <button
-          type="button"
-          onClick={() => chooseDefaults("show")}
-          className="min-h-11 self-center rounded-xl px-4 text-sm text-muted underline"
-        >
-          기본 루틴 다시 보기
-        </button>
-      )}
 
       <button
         type="button"
-        onClick={() => setResetDialog("")}
-        className="mt-auto min-h-11 self-center rounded-xl px-4 text-sm text-muted underline"
+        onClick={() => onGoTab("search")}
+        className="flex min-h-14 items-center justify-center gap-2 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button active:opacity-80"
       >
-        데이터 초기화
+        <SearchIcon />
+        운동 찾기
       </button>
 
-      {hideDialog && (
-        <DeleteRecordDialog
-          title="기본 루틴을 숨길까요?"
-          note="상체 데이·하체 데이가 홈에서 사라져요. 지워지는 건 아니고, 홈 아래쪽 '기본 루틴 다시 보기'로 언제든 되돌릴 수 있어요."
-          label="상체 데이 · 하체 데이"
-          confirmText="숨기기"
-          error={null}
-          onCancel={() => setHideDialog(false)}
-          onConfirm={() => chooseDefaults("hide")}
+      {settingsOpen && (
+        <SettingsSheet
+          onClose={() => setSettingsOpen(false)}
+          onProfileChange={setProfile}
+          onPrefsChange={setPrefs}
+          onReset={handleResetDone}
         />
       )}
 
@@ -485,14 +463,6 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
           error={deleting.error}
           onCancel={() => setDeleting(null)}
           onConfirm={handleDeleteRoutine}
-        />
-      )}
-
-      {resetDialog !== null && (
-        <ResetDialog
-          error={resetDialog || null}
-          onCancel={() => setResetDialog(null)}
-          onConfirm={handleReset}
         />
       )}
     </main>

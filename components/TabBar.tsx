@@ -50,18 +50,19 @@ const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: "records", label: "운동 기록", icon: CalendarIcon },
 ];
 
-/** 이 높이만큼 화면 내용 아래에 여백을 둬서 탭에 가려지지 않게 한다(탭 56px + 아래 Safe Area) */
-export const TAB_BAR_PADDING = "pb-[calc(4.5rem+env(safe-area-inset-bottom))]";
+/** 이 높이만큼 화면 내용 아래에 여백을 둬서 탭에 가려지지 않게 한다(떠 있는 탭 약 84px + 아래 Safe Area) */
+export const TAB_BAR_PADDING = "pb-[calc(6.5rem+env(safe-area-inset-bottom))]";
 
 // 하단 3탭. 운동 진행 중에는 부르는 쪽에서 아예 그리지 않는다(타이머 화면을 방해하지 않기 위함).
 export default function TabBar({ active, onChange }: Props) {
   return (
     <nav
       aria-label="하단 탭"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-background/95 backdrop-blur"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4"
+      style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
     >
-      <div className="mx-auto grid max-w-md grid-cols-3">
+      {/* 바닥에서 띄운 알약 모양. 활성 탭은 민트 알약 */}
+      <div className="pointer-events-auto mx-auto grid max-w-md grid-cols-3 gap-1 rounded-full bg-surface/95 p-1.5 shadow-card backdrop-blur">
         {TABS.map(({ id, label, icon: Icon }) => {
           const on = active === id;
           return (
@@ -70,8 +71,8 @@ export default function TabBar({ active, onChange }: Props) {
               type="button"
               aria-current={on ? "page" : undefined}
               onClick={() => onChange(id)}
-              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs active:opacity-70 ${
-                on ? "font-bold text-accent-ink" : "text-muted"
+              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-full text-xs active:opacity-70 ${
+                on ? "bg-accent/70 font-bold text-accent-ink" : "text-muted"
               }`}
             >
               <Icon />
