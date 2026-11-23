@@ -45,5 +45,7 @@
 ## 현재 적용 상태 (2026-11-23)
 
 - 적용됨: `mascot-idle.webp`(덤벨 든 기본), `mascot-cheer.webp`(축하), `empty-record.webp`(지쳐서 쉬는 모습, 기록이 없을 때). 사용자가 제공한 원본을 투명 배경 그대로 가로·세로 최대 720px(빈 기록은 480px)로 줄여 용량 상한 안으로 맞췄다.
-- 아직 없음(대체 도형이 보임): `routine-upper`, `routine-lower`, `routine-custom`, `logo-dumbbell`, `mascot-tap`.
+- 추가 적용됨: `routine-upper`(벤치 덤벨), `routine-lower`(스쿼트), `routine-custom`(체크리스트), `logo-dumbbell`(덤벨 아이콘). 각각 360px(로고 256px)로 줄임.
+- 아직 없음(대체 도형이 보임): `mascot-tap`(터치 전용 표정, 없으면 기본 이미지가 통통 튐).
+- 주의: 기본·축하·빈 기록 이미지는 강아지, 루틴 카드 일러스트는 고양이 캐릭터라 모습이 서로 다름.
 - 라이선스·출처 기록(`LICENSE-mascot.txt`)은 아직 없음.
