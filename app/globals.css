@@ -1,12 +1,36 @@
 @import "tailwindcss";
 
-/* 다크 테마 고정 색상 (PRD: 다크 테마, 강조색은 초록 하나) */
+/*
+ * 크림·파스텔 테마 (PRD §6, DESIGN §3.6)
+ * 색은 의미 단위 토큰으로만 정하고 컴포넌트에서 색 값을 직접 쓰지 않는다.
+ * 글자 대비(크림 배경 기준): foreground 약 12:1, muted 약 5:1, accent-ink·lavender-ink·danger·warn 4.5:1 이상.
+ */
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --surface: #171717;
-  --muted: #a1a1aa;
-  --accent: #34d399;
+  --background: #fff5ea; /* 크림 배경 */
+  --foreground: #2d2a3e; /* 잉크(본문 글자) */
+  --surface: #fffdf9; /* 카드 */
+  --muted: #6b677a; /* 보조 글자 */
+
+  --accent: #86dbb5; /* 파스텔 민트(버튼·활성) */
+  --accent-ink: #14724f; /* 민트 계열 글자·점 */
+  --on-accent: #1d2a26; /* 민트·라벤더 위 글자 */
+  --lavender: #d9c9fa; /* 파스텔 라벤더(하체·휴식) */
+  --lavender-ink: #5f3cb8; /* 라벤더 계열 글자 */
+  --peach: #ffd2bd; /* 살구(초기화 등 주의 버튼) */
+  --peach-ink: #a1481f;
+
+  --chip: rgba(45, 42, 62, 0.07); /* 보조 버튼·칩 바탕 */
+  --chip-strong: rgba(45, 42, 62, 0.13);
+  --line: rgba(45, 42, 62, 0.1);
+  --danger: #b3261e;
+  --danger-soft: rgba(220, 60, 50, 0.12);
+  --warn: #8a5a00;
+  --warn-soft: rgba(245, 166, 35, 0.2);
+
+  /* 부드러운 그림자: 아래로 퍼지는 그림자 + 위쪽 하이라이트로 입체감 */
+  --shadow-card: 0 8px 20px -8px rgba(110, 90, 140, 0.28), 0 2px 5px rgba(110, 90, 140, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-button: 0 6px 14px -6px rgba(60, 120, 95, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 @theme inline {
@@ -15,13 +39,28 @@
   --color-surface: var(--surface);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --color-lavender: var(--lavender);
+  --color-lavender-ink: var(--lavender-ink);
+  --color-peach: var(--peach);
+  --color-peach-ink: var(--peach-ink);
+  --color-chip: var(--chip);
+  --color-chip-strong: var(--chip-strong);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-button: var(--shadow-button);
   /* 외부 폰트·CDN을 쓰지 않고 기기 기본 한국어 글꼴을 쓴다 */
   --font-sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
     "Noto Sans KR", system-ui, sans-serif;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   /* 가로 스크롤 방지 */
   overflow-x: hidden;
 }

@@ -58,7 +58,7 @@ export default function TabBar({ active, onChange }: Props) {
   return (
     <nav
       aria-label="하단 탭"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-background/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-background/95 backdrop-blur"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto grid max-w-md grid-cols-3">
@@ -71,7 +71,7 @@ export default function TabBar({ active, onChange }: Props) {
               aria-current={on ? "page" : undefined}
               onClick={() => onChange(id)}
               className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs active:opacity-70 ${
-                on ? "font-bold text-accent" : "text-muted"
+                on ? "font-bold text-accent-ink" : "text-muted"
               }`}
             >
               <Icon />

@@ -34,7 +34,7 @@ export default function RecordDetail({ record, onBack, onDelete }: Props) {
         <h1 className="text-2xl font-bold">{record.routineName}</h1>
       </header>
 
-      <section className="rounded-2xl bg-surface p-4">
+      <section className="rounded-2xl bg-surface shadow-card p-4">
         <p className="text-base">{recordTitle(record)}</p>
         <p className="mt-1 text-sm text-muted">
           완료 {done}/{total}세트 · 운동 시간 {formatDuration(record.activeSec)}
@@ -46,7 +46,7 @@ export default function RecordDetail({ record, onBack, onDelete }: Props) {
       </section>
 
       {record.exercises.map((ex, i) => (
-        <section key={i} className="rounded-2xl bg-surface p-4">
+        <section key={i} className="rounded-2xl bg-surface shadow-card p-4">
           <h2 className="text-lg font-bold">{ex.name}</h2>
           <p className="text-sm text-muted">무게 {ex.weightKg === null ? "-" : `${ex.weightKg}kg`}</p>
           <ul className="mt-2 flex flex-col gap-1">
@@ -65,7 +65,7 @@ export default function RecordDetail({ record, onBack, onDelete }: Props) {
       <button
         type="button"
         onClick={onDelete}
-        className="mt-auto min-h-12 rounded-2xl bg-red-400/20 px-4 text-lg font-bold text-red-200"
+        className="mt-auto min-h-12 rounded-2xl bg-danger-soft px-4 text-lg font-bold text-danger"
       >
         기록 삭제
       </button>

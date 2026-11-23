@@ -197,7 +197,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
       {profile?.kind === "none" && (
         <form
           aria-labelledby="nick-title"
-          className="flex flex-col gap-3 rounded-2xl bg-surface p-4"
+          className="flex flex-col gap-3 rounded-2xl bg-surface shadow-card p-4"
           onSubmit={(e) => {
             e.preventDefault();
             handleSaveNickname();
@@ -225,7 +225,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
             }`}
           />
           {nickError && (
-            <p id="nick-error" role="alert" className="text-sm text-red-400">
+            <p id="nick-error" role="alert" className="text-sm text-danger">
               {nickError}
             </p>
           )}
@@ -233,13 +233,13 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
             <button
               type="button"
               onClick={handleSkipNickname}
-              className="min-h-11 rounded-xl bg-white/10 px-4"
+              className="min-h-11 rounded-xl bg-chip px-4"
             >
               건너뛰기
             </button>
             <button
               type="submit"
-              className="min-h-11 rounded-xl bg-accent px-4 font-bold text-black"
+              className="min-h-11 rounded-xl bg-accent px-4 font-bold text-on-accent"
             >
               저장
             </button>
@@ -247,7 +247,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
         </form>
       )}
 
-      <section aria-labelledby="recent-title" className="rounded-2xl bg-surface p-4">
+      <section aria-labelledby="recent-title" className="rounded-2xl bg-surface shadow-card p-4">
         <h2 id="recent-title" className="text-sm font-medium text-muted">
           최근 기록
         </h2>
@@ -262,7 +262,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
 
       {/* 체중(선택): 입력하면 종료 화면·기록에 예상 소모 칼로리를 보여 준다 */}
       {body !== null && (
-        <section aria-labelledby="weight-title" className="rounded-2xl bg-surface p-4">
+        <section aria-labelledby="weight-title" className="rounded-2xl bg-surface shadow-card p-4">
           <h2 id="weight-title" className="text-sm font-medium text-muted">
             체중 <span className="font-normal">(선택 · 칼로리 계산용)</span>
           </h2>
@@ -283,7 +283,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
                 <button
                   type="button"
                   onClick={handleClearWeight}
-                  className="min-h-11 rounded-xl px-3 text-sm text-red-300 underline"
+                  className="min-h-11 rounded-xl px-3 text-sm text-danger underline"
                 >
                   지우기
                 </button>
@@ -315,12 +315,12 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
                   }`}
                 />
                 <span className="text-sm text-muted">kg</span>
-                <button type="submit" className="min-h-11 shrink-0 rounded-xl bg-accent px-4 font-bold text-black">
+                <button type="submit" className="min-h-11 shrink-0 rounded-xl bg-accent px-4 font-bold text-on-accent">
                   저장
                 </button>
               </div>
               {weightError && (
-                <p role="alert" className="text-sm text-red-400">
+                <p role="alert" className="text-sm text-danger">
                   {weightError}
                 </p>
               )}
@@ -335,7 +335,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
 
       {/* 처음 한 번: 기본 루틴을 쓸지 묻는다 */}
       {askDefaults && (
-        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
+        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-2xl bg-surface shadow-card p-4">
           <h2 id="defaults-title" className="text-base font-bold">
             기본 루틴을 쓸까요?
           </h2>
@@ -347,14 +347,14 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
             <button
               type="button"
               onClick={() => chooseDefaults("hide")}
-              className="min-h-11 rounded-xl bg-white/10 px-3"
+              className="min-h-11 rounded-xl bg-chip px-3"
             >
               내 루틴만 쓸게요
             </button>
             <button
               type="button"
               onClick={() => chooseDefaults("show")}
-              className="min-h-11 rounded-xl bg-accent px-3 font-bold text-black"
+              className="min-h-11 rounded-xl bg-accent px-3 font-bold text-on-accent"
             >
               기본 루틴 쓸게요
             </button>
@@ -386,7 +386,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
               const routine = cloneRoutine(r.id); // 원본 샘플을 건드리지 않도록 복사본으로 시작
               if (routine) onSelectRoutine(routine);
             }}
-            className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70"
+            className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface shadow-card px-4 py-3 text-left active:opacity-70"
           >
             <span className="text-lg font-bold">{r.name}</span>
             <span className="text-sm text-muted">
@@ -398,7 +398,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
       )}
 
       {myRoutines === "unreadable" && (
-        <p role="alert" className="rounded-2xl bg-red-400/15 px-4 py-3 text-sm text-red-200">
+        <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
           저장된 내 루틴을 읽을 수 없어요.
         </p>
       )}
@@ -411,7 +411,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
           <p className="text-sm text-muted">아직 만든 루틴이 없어요. 아래 버튼으로 나만의 루틴을 만들어 보세요.</p>
         )}
         {mine.map((r) => (
-            <div key={r.id} className="flex items-stretch gap-1 rounded-2xl bg-surface">
+            <div key={r.id} className="flex items-stretch gap-1 rounded-2xl bg-surface shadow-card">
               <button
                 type="button"
                 onClick={() => onSelectRoutine(copyRoutine(r))}
@@ -432,7 +432,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
                 type="button"
                 aria-label={`${r.name} 삭제`}
                 onClick={() => setDeleting({ id: r.id, error: null })}
-                className="mr-1 min-h-11 min-w-11 self-center rounded-xl px-2 text-sm text-red-300 underline"
+                className="mr-1 min-h-11 min-w-11 self-center rounded-xl px-2 text-sm text-danger underline"
               >
                 삭제
               </button>
@@ -441,7 +441,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine }
         <button
           type="button"
           onClick={onCreateRoutine}
-          className="min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black"
+          className="min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
         >
           + 루틴 만들기
         </button>

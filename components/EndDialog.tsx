@@ -29,7 +29,7 @@ export default function EndDialog({ onContinue, onSaveAndEnd, onDiscard }: Props
         role="dialog"
         aria-modal="true"
         aria-labelledby="end-title"
-        className="flex w-full max-w-md flex-col gap-3 rounded-3xl bg-surface p-5"
+        className="flex w-full max-w-md flex-col gap-3 rounded-3xl bg-surface shadow-card p-5"
       >
         <h2 id="end-title" className="text-xl font-bold">
           운동을 끝낼까요?
@@ -41,21 +41,21 @@ export default function EndDialog({ onContinue, onSaveAndEnd, onDiscard }: Props
           ref={firstRef}
           type="button"
           onClick={onContinue}
-          className="min-h-12 rounded-2xl bg-accent px-4 text-lg font-bold text-black"
+          className="min-h-12 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
         >
           계속하기
         </button>
         <button
           type="button"
           onClick={onSaveAndEnd}
-          className="min-h-12 rounded-2xl bg-white/10 px-4 text-lg font-bold"
+          className="min-h-12 rounded-2xl bg-chip px-4 text-lg font-bold"
         >
           저장 후 종료
         </button>
         <button
           type="button"
           onClick={onDiscard}
-          className="min-h-12 rounded-2xl px-4 text-lg text-red-300"
+          className="min-h-12 rounded-2xl px-4 text-lg text-danger"
         >
           저장 안 하고 종료
         </button>

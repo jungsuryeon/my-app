@@ -114,7 +114,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
                   setItems((prev) => [...prev, { uid: nextUid.current++, exercise: ex, input: toInput(ex) }]);
                   setPicking(false);
                 }}
-                className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70"
+                className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface shadow-card px-4 py-3 text-left active:opacity-70"
               >
                 <span className="text-lg font-bold">{c.name}</span>
                 <span className="text-sm text-muted">
@@ -154,7 +154,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={`최대 ${MY_ROUTINE_LIMITS.nameMax}글자 (예: 가슴 데이)`}
-          className="min-h-11 w-full rounded-xl bg-surface px-3 text-base outline-none focus:ring-2 focus:ring-accent"
+          className="min-h-11 w-full rounded-xl bg-surface shadow-card px-3 text-base outline-none focus:ring-2 focus:ring-accent"
         />
       </div>
 
@@ -163,7 +163,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
         {items.map((it, i) => {
           const { errors } = validateInput(it.input);
           return (
-            <div key={it.uid} className="rounded-2xl bg-surface p-3">
+            <div key={it.uid} className="rounded-2xl bg-surface shadow-card p-3">
               <div className="flex items-center gap-1">
                 <p className="flex-1 pl-1">
                   <span className="text-muted">{i + 1}. </span>
@@ -191,7 +191,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
                   type="button"
                   aria-label={`${it.exercise.name} 빼기`}
                   onClick={() => setItems(items.filter((x) => x.uid !== it.uid))}
-                  className="min-h-11 min-w-11 rounded-xl text-lg text-red-300"
+                  className="min-h-11 min-w-11 rounded-xl text-lg text-danger"
                 >
                   ✕
                 </button>
@@ -222,7 +222,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
                         <span className="text-sm text-muted">{f.unit}</span>
                       </div>
                       {err && (
-                        <p role="alert" className="mt-1 text-xs text-red-400">
+                        <p role="alert" className="mt-1 text-xs text-danger">
                           {err}
                         </p>
                       )}
@@ -238,7 +238,7 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
           type="button"
           disabled={full}
           onClick={() => setPicking(true)}
-          className="min-h-12 rounded-2xl bg-white/10 px-4 text-base font-bold disabled:opacity-40"
+          className="min-h-12 rounded-2xl bg-chip px-4 text-base font-bold disabled:opacity-40"
         >
           + 운동 추가
         </button>
@@ -252,14 +252,14 @@ export default function RoutineEditor({ draft, onCancel, onSaved }: Props) {
         폰에만 저장돼요.
       </p>
       {error && (
-        <p role="alert" className="text-sm text-red-300">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}
       <button
         type="button"
         onClick={handleSave}
-        className="sticky bottom-4 mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black shadow-lg"
+        className="sticky bottom-4 mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent shadow-lg"
       >
         {editing ? "수정 저장" : "루틴 저장"}
       </button>

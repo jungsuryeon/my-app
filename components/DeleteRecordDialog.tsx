@@ -47,7 +47,7 @@ export default function DeleteRecordDialog({
         aria-modal="true"
         aria-labelledby="del-title"
         aria-describedby="del-desc"
-        className="flex w-full max-w-md flex-col gap-3 rounded-3xl bg-surface p-5"
+        className="flex w-full max-w-md flex-col gap-3 rounded-3xl bg-surface shadow-card p-5"
       >
         <h2 id="del-title" className="text-xl font-bold">
           {title}
@@ -57,7 +57,7 @@ export default function DeleteRecordDialog({
         </p>
         <p className="text-sm text-muted">{note}</p>
         {error && (
-          <p role="alert" className="text-sm text-red-300">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
         )}
@@ -66,14 +66,14 @@ export default function DeleteRecordDialog({
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="min-h-12 rounded-2xl bg-white/10 px-4 text-lg font-bold"
+            className="min-h-12 rounded-2xl bg-chip px-4 text-lg font-bold"
           >
             {cancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="min-h-12 rounded-2xl bg-red-400/25 px-4 text-lg font-bold text-red-200"
+            className="min-h-12 rounded-2xl bg-danger-soft px-4 text-lg font-bold text-danger"
           >
             {confirmText}
           </button>

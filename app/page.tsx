@@ -82,7 +82,7 @@ export default function Page() {
       {notice && (
         <div
           role="status"
-          className="mx-auto flex w-full max-w-md items-start justify-between gap-3 bg-amber-300/15 px-4 py-3 text-sm text-amber-100"
+          className="mx-auto flex w-full max-w-md items-start justify-between gap-3 bg-warn-soft px-4 py-3 text-sm text-warn"
         >
           <span>{notice}</span>
           <button
@@ -95,7 +95,7 @@ export default function Page() {
         </div>
       )}
       {workout.snapshotFailed && (
-        <p role="alert" className="mx-auto w-full max-w-md bg-red-400/15 px-4 py-2 text-sm text-red-200">
+        <p role="alert" className="mx-auto w-full max-w-md bg-danger-soft px-4 py-2 text-sm text-danger">
           진행 상태를 저장하지 못했어요. 지금 새로고침하면 운동이 사라질 수 있어요.
         </p>
       )}

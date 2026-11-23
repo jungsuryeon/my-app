@@ -104,7 +104,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
             ["부위", selected.bodyPart],
             ["기구", selected.equipment],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-2xl bg-surface px-2 py-3">
+            <div key={k} className="rounded-2xl bg-surface shadow-card px-2 py-3">
               <dt className="text-xs text-muted">{k}</dt>
               <dd className="mt-1 font-bold">{v}</dd>
             </div>
@@ -118,14 +118,14 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
             onClick={() =>
               onCartChange(inCart ? cart.filter((k) => k !== selected.key) : [...cart, selected.key])
             }
-            className="min-h-14 rounded-2xl bg-white/10 px-4 text-lg font-bold disabled:opacity-40"
+            className="min-h-14 rounded-2xl bg-chip px-4 text-lg font-bold disabled:opacity-40"
           >
             {inCart ? "담김 ✓ 빼기" : "루틴에 추가"}
           </button>
           <button
             type="button"
             onClick={() => onStart(makeTempRoutine(selected))}
-            className="min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black"
+            className="min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
           >
             이 운동으로 시작
           </button>
@@ -158,11 +158,11 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
               key={c.key}
               type="button"
               onClick={() => setSelected(c)}
-              className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70"
+              className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface shadow-card px-4 py-3 text-left active:opacity-70"
             >
               <span className="text-lg font-bold">
                 {c.name}
-                {cart.includes(c.key) && <span className="ml-2 text-sm text-accent">담김</span>}
+                {cart.includes(c.key) && <span className="ml-2 text-sm text-accent-ink">담김</span>}
               </span>
               <span className="text-sm text-muted">
                 {regionOf(c)} · {c.bodyPart} · {c.equipment}
@@ -176,7 +176,7 @@ export default function ExerciseSearch({ onStart, cart, onCartChange, onOpenEdit
         <button
           type="button"
           onClick={onOpenEditor}
-          className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black shadow-lg"
+          className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent shadow-lg"
         >
           담은 운동 {cart.length}개 · 루틴 만들기
         </button>

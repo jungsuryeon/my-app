@@ -28,7 +28,7 @@ export function applyFilter(f: ExerciseFilter): CatalogExercise[] {
 
 const chip = (on: boolean, size: "lg" | "sm") =>
   `min-h-11 rounded-full ${size === "lg" ? "px-5 text-base" : "px-4 text-sm"} ${
-    on ? "bg-accent font-bold text-black" : "bg-white/10"
+    on ? "bg-accent font-bold text-on-accent" : "bg-chip"
   }`;
 
 type Props = {
@@ -53,7 +53,7 @@ export default function ExerciseFilters({ value, onChange, idPrefix = "ex" }: Pr
         value={query}
         onChange={(e) => onChange({ ...value, query: e.target.value })}
         placeholder="운동 이름 (예: 체스트프레스)"
-        className="min-h-11 rounded-xl bg-surface px-3 text-base outline-none focus:ring-2 focus:ring-accent"
+        className="min-h-11 rounded-xl bg-surface shadow-card px-3 text-base outline-none focus:ring-2 focus:ring-accent"
       />
 
       <div className="flex flex-col gap-2" role="group" aria-label="조건">

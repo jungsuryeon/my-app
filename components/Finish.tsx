@@ -80,7 +80,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
         <button
           type="button"
           onClick={onHome}
-          className="min-h-12 w-full rounded-2xl bg-accent px-4 text-lg font-bold text-black"
+          className="min-h-12 w-full rounded-2xl bg-accent px-4 text-lg font-bold text-on-accent"
         >
           홈으로
         </button>
@@ -101,7 +101,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
       </header>
 
       {body !== null && (
-        <section aria-label="예상 소모 칼로리" className="rounded-2xl bg-surface p-4">
+        <section aria-label="예상 소모 칼로리" className="rounded-2xl bg-surface shadow-card p-4">
           {kcal !== null ? (
             <>
               <p className="text-sm text-muted">예상 소모 칼로리</p>
@@ -122,7 +122,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
 
       <div className="flex flex-col gap-4">
         {session.exercises.map((ex, ei) => (
-          <section key={ex.id} aria-labelledby={`ex-${ei}`} className="rounded-2xl bg-surface p-4">
+          <section key={ex.id} aria-labelledby={`ex-${ei}`} className="rounded-2xl bg-surface shadow-card p-4">
             <h2 id={`ex-${ei}`} className="mb-2 text-lg font-bold">
               {ex.name}
               <span className="ml-2 text-sm font-normal text-muted">
@@ -138,7 +138,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
                       {si + 1}세트{" "}
                       <span
                         className={
-                          set.status === "done" ? "text-accent" : "text-amber-200"
+                          set.status === "done" ? "text-accent-ink" : "text-warn"
                         }
                       >
                         {STATUS_LABEL[set.status]}
@@ -150,7 +150,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
                         aria-label={`${ex.name} ${si + 1}세트 반복 수 줄이기`}
                         onClick={() => onEditReps(ei, si, set.reps - 1)}
                         disabled={set.reps <= EDIT_REPS_MIN}
-                        className="min-h-11 min-w-11 rounded-xl bg-white/10 text-xl disabled:opacity-30"
+                        className="min-h-11 min-w-11 rounded-xl bg-chip text-xl disabled:opacity-30"
                       >
                         −
                       </button>
@@ -166,7 +166,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
                         aria-label={`${ex.name} ${si + 1}세트 반복 수 늘리기`}
                         onClick={() => onEditReps(ei, si, set.reps + 1)}
                         disabled={set.reps >= EDIT_REPS_MAX}
-                        className="min-h-11 min-w-11 rounded-xl bg-white/10 text-xl disabled:opacity-30"
+                        className="min-h-11 min-w-11 rounded-xl bg-chip text-xl disabled:opacity-30"
                       >
                         +
                       </button>
@@ -180,7 +180,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
       </div>
 
       {error && (
-        <p role="alert" className="rounded-2xl bg-red-400/15 p-3 text-sm text-red-200">
+        <p role="alert" className="rounded-2xl bg-danger-soft p-3 text-sm text-danger">
           {error}
         </p>
       )}
@@ -189,26 +189,26 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-black disabled:opacity-40"
+        className="min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-on-accent disabled:opacity-40"
       >
         {error ? "다시 저장" : saving ? "저장하는 중…" : "기록 저장"}
       </button>
 
       {confirmDiscard ? (
-        <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
+        <div className="flex flex-col gap-2 rounded-2xl bg-surface shadow-card p-4">
           <p className="text-sm">이 운동 기록이 삭제돼요. 저장하지 않고 나갈까요?</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setConfirmDiscard(false)}
-              className="min-h-11 rounded-xl bg-white/10 px-4"
+              className="min-h-11 rounded-xl bg-chip px-4"
             >
               취소
             </button>
             <button
               type="button"
               onClick={onHome}
-              className="min-h-11 rounded-xl bg-red-400/20 px-4 text-red-200"
+              className="min-h-11 rounded-xl bg-danger-soft px-4 text-danger"
             >
               버리기
             </button>

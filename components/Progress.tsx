@@ -69,10 +69,10 @@ export default function Progress({ session, nowMs, onPause, onResume, awayPaused
         aria-live="off"
       >
         {paused ? (
-          <p className="text-lg font-bold text-amber-300">일시정지 · {label}</p>
+          <p className="text-lg font-bold text-warn">일시정지 · {label}</p>
         ) : (
           <p
-            className={`text-lg font-medium ${shown === "REST" ? "text-sky-300" : "text-accent"}`}
+            className={`text-lg font-medium ${shown === "REST" ? "text-lavender-ink" : "text-accent-ink"}`}
           >
             {label}
           </p>
@@ -84,14 +84,14 @@ export default function Progress({ session, nowMs, onPause, onResume, awayPaused
         </p>
         <p className="text-2xl text-muted">{sub}</p>
         {paused && awayPaused && (
-          <p role="alert" className="mt-4 text-center text-base text-amber-200">
+          <p role="alert" className="mt-4 text-center text-base text-warn">
             화면에서 벗어나 일시정지했어요. 이어하기를 눌러 계속하세요.
           </p>
         )}
 
         {gauge !== null && (
           <div
-            className="mt-6 h-3 w-full overflow-hidden rounded-full bg-surface"
+            className="mt-6 h-3 w-full overflow-hidden rounded-full bg-chip-strong"
             role="progressbar"
             aria-label="남은 휴식 시간"
             aria-valuemin={0}
@@ -99,7 +99,7 @@ export default function Progress({ session, nowMs, onPause, onResume, awayPaused
             aria-valuenow={Math.round(gauge * 100)}
           >
             <div
-              className="h-full rounded-full bg-sky-300"
+              className="h-full rounded-full bg-lavender"
               style={{ width: `${gauge * 100}%` }}
             />
           </div>
@@ -118,7 +118,7 @@ export default function Progress({ session, nowMs, onPause, onResume, awayPaused
           <button
             type="button"
             onClick={onResume}
-            className="min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-black"
+            className="min-h-14 rounded-2xl bg-accent px-4 text-xl font-bold text-on-accent"
           >
             이어하기
           </button>
@@ -126,7 +126,7 @@ export default function Progress({ session, nowMs, onPause, onResume, awayPaused
           <button
             type="button"
             onClick={onPause}
-            className="min-h-14 rounded-2xl bg-surface px-4 text-xl font-bold"
+            className="min-h-14 rounded-2xl bg-surface shadow-card px-4 text-xl font-bold"
           >
             일시정지
           </button>
@@ -136,7 +136,7 @@ export default function Progress({ session, nowMs, onPause, onResume, awayPaused
           type="button"
           onClick={onSkip}
           disabled={m.phase !== "EXERCISE"}
-          className="min-h-14 rounded-2xl bg-surface px-4 text-xl font-bold disabled:cursor-not-allowed disabled:opacity-30"
+          className="min-h-14 rounded-2xl bg-surface shadow-card px-4 text-xl font-bold disabled:cursor-not-allowed disabled:opacity-30"
         >
           건너뛰기
         </button>

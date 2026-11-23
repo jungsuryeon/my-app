@@ -30,7 +30,7 @@ export default function ResetDialog({ error, onCancel, onConfirm }: Props) {
         aria-modal="true"
         aria-labelledby="reset-title"
         aria-describedby="reset-desc"
-        className="flex w-full max-w-md flex-col gap-3 rounded-3xl bg-surface p-5"
+        className="flex w-full max-w-md flex-col gap-3 rounded-3xl bg-surface shadow-card p-5"
       >
         <h2 id="reset-title" className="text-xl font-bold">
           데이터 초기화
@@ -40,7 +40,7 @@ export default function ResetDialog({ error, onCancel, onConfirm }: Props) {
         </p>
         <p className="text-sm text-muted">삭제한 데이터는 되돌릴 수 없어요.</p>
         {error && (
-          <p role="alert" className="text-sm text-red-300">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
         )}
@@ -49,14 +49,14 @@ export default function ResetDialog({ error, onCancel, onConfirm }: Props) {
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="min-h-12 rounded-2xl bg-white/10 px-4 text-lg font-bold"
+            className="min-h-12 rounded-2xl bg-chip px-4 text-lg font-bold"
           >
             취소
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="min-h-12 rounded-2xl bg-red-400/25 px-4 text-lg font-bold text-red-200"
+            className="min-h-12 rounded-2xl bg-danger-soft px-4 text-lg font-bold text-danger"
           >
             삭제
           </button>

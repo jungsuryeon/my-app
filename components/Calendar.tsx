@@ -85,12 +85,12 @@ export default function Calendar() {
       </header>
 
       {records === "unreadable" && (
-        <p role="alert" className="rounded-2xl bg-red-400/15 px-4 py-3 text-sm text-red-200">
+        <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
           저장된 기록을 읽을 수 없어요.
         </p>
       )}
 
-      <section aria-label="월간 달력" className="rounded-2xl bg-surface p-3">
+      <section aria-label="월간 달력" className="rounded-2xl bg-surface shadow-card p-3">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -135,13 +135,13 @@ export default function Calendar() {
                 aria-pressed={selected === c.key}
                 aria-label={counts.has(c.key) ? `${c.day}일 운동 ${counts.get(c.key)}회` : `${c.day}일`}
                 className={`flex h-11 flex-col items-center justify-center rounded-xl text-base ${
-                  selected === c.key ? "bg-white/15" : ""
-                } ${c.key === today ? "ring-1 ring-accent" : ""}`}
+                  selected === c.key ? "bg-chip-strong" : ""
+                } ${c.key === today ? "ring-2 ring-accent-ink" : ""}`}
               >
                 {c.day}
                 <span
                   aria-hidden="true"
-                  className={`mt-0.5 h-1.5 w-1.5 rounded-full ${counts.has(c.key) ? "bg-accent" : "bg-transparent"}`}
+                  className={`mt-0.5 h-1.5 w-1.5 rounded-full ${counts.has(c.key) ? "bg-accent-ink" : "bg-transparent"}`}
                 />
               </button>
             ),
@@ -150,15 +150,15 @@ export default function Calendar() {
       </section>
 
       <section aria-label="월간 통계" className="grid grid-cols-3 gap-2">
-        <div className="rounded-2xl bg-surface p-3">
+        <div className="rounded-2xl bg-surface shadow-card p-3">
           <p className="text-xs text-muted">운동한 날</p>
           <p className="mt-1 text-xl font-bold">{stats ? `${stats.days}일` : "-"}</p>
         </div>
-        <div className="rounded-2xl bg-surface p-3">
+        <div className="rounded-2xl bg-surface shadow-card p-3">
           <p className="text-xs text-muted">운동 횟수</p>
           <p className="mt-1 text-xl font-bold">{stats ? `${stats.count}회` : "-"}</p>
         </div>
-        <div className="rounded-2xl bg-surface p-3">
+        <div className="rounded-2xl bg-surface shadow-card p-3">
           <p className="text-xs text-muted">예상 칼로리</p>
           <p className="mt-1 text-xl font-bold">
             {stats && stats.kcalCount > 0 ? `${stats.kcal.toLocaleString("ko-KR")}` : "-"}
@@ -185,7 +185,7 @@ export default function Calendar() {
                 key={r.id}
                 type="button"
                 onClick={() => setDetailId(r.id)}
-                className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface px-4 py-3 text-left active:opacity-70"
+                className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-surface shadow-card px-4 py-3 text-left active:opacity-70"
               >
                 <span className="text-lg font-bold">{r.routineName}</span>
                 <span className="text-sm text-muted">
