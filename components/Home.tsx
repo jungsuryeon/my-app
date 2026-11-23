@@ -15,10 +15,12 @@ type Props = {
   onSelectRoutine: (routineId: string) => void;
   /** "운동 기록 보기" 버튼: 캘린더 화면으로 */
   onOpenCalendar: () => void;
+  /** "운동 찾기" 버튼: 운동 검색 화면으로 */
+  onOpenSearch: () => void;
 };
 
 // 홈 화면. 닉네임·최근 기록·데이터 초기화는 이후 작업에서 채운다.
-export default function Home({ onSelectRoutine, onOpenCalendar }: Props) {
+export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: Props) {
   // 처음 그릴 때는 기록이 없는 것으로 두고(서버 화면과 같게), 그려진 뒤에 저장소에서 읽는다
   const [recent, setRecent] = useState<Recent>({ kind: "none" });
   // 닉네임 상태. null = 아직 읽기 전(입력 카드가 번쩍 보였다 사라지지 않게 읽기 전에는 아무것도 안 보인다)
@@ -184,6 +186,13 @@ export default function Home({ onSelectRoutine, onOpenCalendar }: Props) {
             </span>
           </button>
         ))}
+        <button
+          type="button"
+          onClick={onOpenSearch}
+          className="min-h-14 rounded-2xl bg-white/10 px-4 text-lg font-bold"
+        >
+          운동 찾기
+        </button>
       </section>
 
       <button
