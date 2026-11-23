@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CATALOG,
+  EQUIPMENTS,
   REGION_PARTS,
   findCatalog,
   makeTempRoutine,
@@ -15,7 +16,14 @@ describe("검증된 운동 목록", () => {
     const sampleIds = SAMPLE_ROUTINES.flatMap((r) => r.exercises.map((e) => e.id));
     expect(sampleIds).toHaveLength(7);
     for (const id of sampleIds) expect(findCatalog(id)).not.toBeNull();
-    expect(CATALOG).toHaveLength(7);
+    expect(CATALOG.length).toBeGreaterThanOrEqual(30);
+  });
+
+  it("모든 세부 부위·기구가 목록에서 실제로 쓰이고 칩에 나온다", () => {
+    const parts = new Set(CATALOG.map((c) => c.bodyPart));
+    for (const p of [...REGION_PARTS.상체, ...REGION_PARTS.하체]) expect(parts.has(p)).toBe(true);
+    const equips = new Set(CATALOG.map((c) => c.equipment));
+    for (const q of EQUIPMENTS) expect(equips.has(q)).toBe(true);
   });
 
   it("샘플 루틴의 이름과 목록의 이름이 같다", () => {
@@ -38,7 +46,15 @@ describe("검증된 운동 목록", () => {
 
 describe("한국어 검색", () => {
   it("이름 일부로 찾는다", () => {
-    expect(searchCatalog({ query: "프레스" }).map((c) => c.name)).toEqual(["체스트프레스", "숄더프레스", "레그프레스"]);
+    const names = searchCatalog({ query: "프레스" }).map((c) => c.name);
+    for (const n of ["체스트프레스", "숄더프레스", "레그프레스", "벤치프레스"]) expect(names).toContain(n);
+    expect(names.every((n) => n.includes("프레스"))).toBe(true);
+  });
+
+  it("별칭으로도 찾는다(턱걸이→풀업, 삼두→삼두 운동, 종아리)", () => {
+    expect(searchCatalog({ query: "턱걸이" }).map((c) => c.key)).toContain("pull-up");
+    expect(searchCatalog({ query: "삼두" }).every((c) => c.bodyPart === "팔")).toBe(true);
+    expect(searchCatalog({ query: "종아리" }).length).toBeGreaterThanOrEqual(2);
   });
 
   it("공백·대소문자를 가리지 않고 다른 이름으로도 찾는다", () => {
@@ -49,31 +65,31 @@ describe("한국어 검색", () => {
   });
 
   it("부위·기구 조건으로 거른다", () => {
-    expect(searchCatalog({ region: "하체" }).map((c) => c.key)).toEqual([
-      "leg-press",
-      "hip-abduction",
-      "hip-adduction",
-      "squat",
-    ]);
-    expect(searchCatalog({ region: "상체" }).map((c) => c.key)).toEqual([
-      "lat-pulldown",
-      "chest-press",
-      "shoulder-press",
-    ]);
-    expect(searchCatalog({ equipment: "바벨" }).map((c) => c.key)).toEqual(["squat"]);
-    expect(searchCatalog({ region: "하체", equipment: "머신" })).toHaveLength(3);
-    expect(searchCatalog({ query: "프레스", bodyPart: "가슴" })).toHaveLength(1);
+    const lower = searchCatalog({ region: "하체" });
+    const upper = searchCatalog({ region: "상체" });
+    expect(lower.map((c) => c.key)).toEqual(expect.arrayContaining(["leg-press", "hip-abduction", "hip-adduction", "squat"]));
+    expect(upper.map((c) => c.key)).toEqual(expect.arrayContaining(["lat-pulldown", "chest-press", "shoulder-press"]));
+    expect(lower.every((c) => regionOf(c) === "하체")).toBe(true);
+    expect(upper.every((c) => regionOf(c) === "상체")).toBe(true);
+    expect(lower.length + upper.length).toBe(CATALOG.length);
+    const bar = searchCatalog({ equipment: "바벨" });
+    expect(bar.map((c) => c.key)).toContain("squat");
+    expect(bar.every((c) => c.equipment === "바벨")).toBe(true);
+    const machineLower = searchCatalog({ region: "하체", equipment: "머신" });
+    expect(machineLower.map((c) => c.key)).toEqual(expect.arrayContaining(["leg-press", "hip-abduction", "hip-adduction"]));
+    expect(machineLower.every((c) => c.equipment === "머신" && regionOf(c) === "하체")).toBe(true);
+    const chestPress = searchCatalog({ query: "프레스", bodyPart: "가슴" });
+    expect(chestPress.map((c) => c.key)).toContain("chest-press");
+    expect(chestPress.every((c) => c.bodyPart === "가슴")).toBe(true);
   });
 
   it("상체/하체를 고른 뒤 세부 부위로 더 좁힌다", () => {
-    expect(searchCatalog({ region: "하체", bodyPart: "허벅지" }).map((c) => c.key)).toEqual([
-      "leg-press",
-      "hip-adduction",
-      "squat",
-    ]);
+    const thigh = searchCatalog({ region: "하체", bodyPart: "허벅지" });
+    expect(thigh.map((c) => c.key)).toEqual(expect.arrayContaining(["leg-press", "hip-adduction", "squat"]));
+    expect(thigh.every((c) => c.bodyPart === "허벅지")).toBe(true);
     expect(searchCatalog({ region: "상체", bodyPart: "엉덩이" })).toEqual([]);
-    expect(searchCatalog({ query: "상체" })).toHaveLength(3);
-    expect(searchCatalog({ query: "하체" })).toHaveLength(4);
+    expect(searchCatalog({ query: "상체" })).toHaveLength(searchCatalog({ region: "상체" }).length);
+    expect(searchCatalog({ query: "하체" })).toHaveLength(searchCatalog({ region: "하체" }).length);
   });
 
   it("모든 운동이 상체/하체 중 하나에 속하고, 세부 부위가 겹치지 않는다", () => {
@@ -83,8 +99,8 @@ describe("한국어 검색", () => {
   });
 
   it("검색어가 없으면 전체, 맞는 게 없으면 빈 목록", () => {
-    expect(searchCatalog()).toHaveLength(7);
-    expect(searchCatalog({ query: "  " })).toHaveLength(7);
+    expect(searchCatalog()).toHaveLength(CATALOG.length);
+    expect(searchCatalog({ query: "  " })).toHaveLength(CATALOG.length);
     expect(searchCatalog({ query: "없는운동" })).toEqual([]);
   });
 
