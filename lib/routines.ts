@@ -90,3 +90,117 @@ export function cloneRoutine(id: string): Routine | null {
     exercises: found.exercises.map((e) => ({ ...e })),
   };
 }
+
+// ───────────────────────── 입력 값 검증 (PLAN 작업 12, PRD 입력값 범위) ─────────────────────────
+
+/** 화면의 입력칸 값(글자). 비워 두거나 잘못 입력할 수 있어 숫자가 아니라 글자로 받는다. */
+export type ExerciseInput = {
+  reps: string;
+  sets: string;
+  restSec: string;
+  tempoSec: string;
+  weightKg: string;
+};
+
+export type FieldName = keyof ExerciseInput;
+export type FieldErrors = Partial<Record<FieldName, string>>;
+
+/** 운동 설정을 입력칸 글자로 바꾼다 (무게 null → 빈 칸) */
+export function toInput(e: Exercise): ExerciseInput {
+  return {
+    reps: String(e.reps),
+    sets: String(e.sets),
+    restSec: String(e.restSec),
+    tempoSec: String(e.tempoSec),
+    weightKg: e.weightKg === null ? "" : String(e.weightKg),
+  };
+}
+
+/** 글자를 숫자로. 비었거나 숫자가 아니면 null */
+function toNumber(text: string): number | null {
+  const t = text.trim();
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** 소수점 아래가 한 자리 이하인가 (부동소수점 오차를 피하려고 글자로 확인) */
+function hasAtMostOneDecimal(text: string): boolean {
+  const m = text.trim().match(/\.(\d+)$/);
+  return !m || m[1].length <= 1;
+}
+
+function checkInteger(
+  text: string,
+  label: string,
+  unit: string,
+  min: number,
+  max: number,
+): { value?: number; error?: string } {
+  const n = toNumber(text);
+  if (n === null) return { error: `${label}을(를) 입력해 주세요` };
+  if (!Number.isInteger(n) || n < min || n > max) {
+    return { error: `${label}은(는) ${min}~${max}${unit} 사이 정수로 입력해 주세요` };
+  }
+  return { value: n };
+}
+
+/**
+ * 입력칸 값을 검사한다. 무게를 뺀 네 값은 비어 있거나 범위를 벗어나면 오류가 되고,
+ * 무게는 비워 둘 수 있으며(null → 기록에는 "-") 입력하면 0~500kg, 0.5 단위여야 한다.
+ * 오류가 하나도 없을 때만 values가 채워진다.
+ */
+export function validateInput(input: ExerciseInput): {
+  errors: FieldErrors;
+  values: Pick<Exercise, "reps" | "sets" | "restSec" | "tempoSec" | "weightKg"> | null;
+} {
+  const errors: FieldErrors = {};
+  const L = LIMITS;
+
+  const reps = checkInteger(input.reps, "반복", "회", L.reps.min, L.reps.max);
+  const sets = checkInteger(input.sets, "세트", "개", L.sets.min, L.sets.max);
+  const rest = checkInteger(input.restSec, "휴식", "초", L.restSec.min, L.restSec.max);
+  if (reps.error) errors.reps = reps.error;
+  if (sets.error) errors.sets = sets.error;
+  if (rest.error) errors.restSec = rest.error;
+
+  // 템포: 1~10초, 소수 한 자리까지
+  const tempo = toNumber(input.tempoSec);
+  if (tempo === null) {
+    errors.tempoSec = "템포를 입력해 주세요";
+  } else if (
+    tempo < L.tempoSec.min ||
+    tempo > L.tempoSec.max ||
+    !hasAtMostOneDecimal(input.tempoSec)
+  ) {
+    errors.tempoSec = `템포는 ${L.tempoSec.min}~${L.tempoSec.max}초 사이로 입력해 주세요(소수 한 자리까지)`;
+  }
+
+  // 무게: 비워도 됨. 입력하면 0~500kg, 0.5 단위
+  let weight: number | null = null;
+  if (input.weightKg.trim() !== "") {
+    const w = toNumber(input.weightKg);
+    if (
+      w === null ||
+      w < L.weightKg.min ||
+      w > L.weightKg.max ||
+      !Number.isInteger(w / L.weightKg.step)
+    ) {
+      errors.weightKg = `무게는 비우거나 ${L.weightKg.min}~${L.weightKg.max}kg 사이 0.5 단위로 입력해 주세요`;
+    } else {
+      weight = w;
+    }
+  }
+
+  if (Object.keys(errors).length > 0) return { errors, values: null };
+  return {
+    errors,
+    values: {
+      reps: reps.value!,
+      sets: sets.value!,
+      restSec: rest.value!,
+      tempoSec: tempo!,
+      weightKg: weight,
+    },
+  };
+}
