@@ -18,6 +18,7 @@ import {
   endSession,
   pauseSession,
   resumeSession,
+  setSetReps,
   skipSet,
   startSession,
   tick,
@@ -212,6 +213,16 @@ export function useWorkout() {
     [commit],
   );
 
+  /** 종료 화면에서 세트 하나의 반복 수를 고친다 */
+  const editReps = useCallback(
+    (exerciseIndex: number, setIndex: number, reps: number) => {
+      const s = sessionRef.current;
+      if (!s) return;
+      commit(setSetReps(s, exerciseIndex, setIndex, reps));
+    },
+    [commit],
+  );
+
   /** 확인창 "저장 후 종료": 종료를 확정한다(못 한 세트는 미수행). 종료 화면으로 간다 */
   const finish = useCallback(() => {
     const s = sessionRef.current;
@@ -331,5 +342,5 @@ export function useWorkout() {
     };
   }, [autoPause]);
 
-  return { session, nowMs, awayPaused, wakeLockStatus, snapshotFailed, restore, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
+  return { session, nowMs, awayPaused, wakeLockStatus, snapshotFailed, restore, editReps, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
 }

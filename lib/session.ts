@@ -254,3 +254,31 @@ export function currentReps(s: Session, nowMs: number): number {
   }
   return 0;
 }
+
+/** 종료 화면에서 고칠 수 있는 반복 수의 범위(PRD: 0~50회) */
+export const EDIT_REPS_MIN = 0;
+export const EDIT_REPS_MAX = 50;
+
+/**
+ * 종료 화면에서 세트 하나의 반복 수를 고친다(PRD: 운동 중에는 고치지 않고, 끝난 뒤에만 고칠 수 있다).
+ * 정수가 아니거나 범위를 벗어난 값은 0~50 안으로 맞춘다. 세트 상태(완료·건너뜀·미수행)는 바꾸지 않는다.
+ * 종료(COMPLETED) 상태가 아니거나 없는 세트면 그대로 돌려준다.
+ */
+export function setSetReps(
+  s: Session,
+  exerciseIndex: number,
+  setIndex: number,
+  reps: number,
+): Session {
+  if (s.machine.phase !== "COMPLETED") return s;
+  const target = s.machine.sets[exerciseIndex]?.[setIndex];
+  if (!target) return s;
+  const clamped = Math.min(EDIT_REPS_MAX, Math.max(EDIT_REPS_MIN, Math.round(reps)));
+  if (!Number.isFinite(clamped) || clamped === target.reps) return s;
+  const sets = s.machine.sets.map((row, ei) =>
+    ei !== exerciseIndex
+      ? row
+      : row.map((r, si) => (si !== setIndex ? r : { ...r, reps: clamped })),
+  );
+  return { ...s, machine: { ...s.machine, sets } };
+}

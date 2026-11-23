@@ -7,6 +7,7 @@ import {
   endSession,
   pauseSession,
   resumeSession,
+  setSetReps,
   skipSet,
   startSession,
   tick,
@@ -218,5 +219,44 @@ describe("전체 종료", () => {
   it("운동이 진행 중일 때는 바로 종료할 수 없다(먼저 멈춰야 함)", () => {
     const s = run(startSession(createSession(routine), 0), 0, 4000);
     expect(endSession(s)).toBe(s);
+  });
+});
+
+describe("종료 화면에서 반복 수 수정", () => {
+  /** 운동A 2세트 완료 → B 준비에서 전체 종료(B는 미수행) */
+  function completed() {
+    let s = startSession(createSession(routine), 0);
+    s = run(s, 0, 11_000);
+    return endSession(s);
+  }
+
+  it("끝난 뒤에 세트의 반복 수를 고칠 수 있고 세트 상태는 그대로다", () => {
+    const s = setSetReps(completed(), 0, 1, 2);
+    expect(s.machine.sets[0][1]).toMatchObject({ status: "done", reps: 2, targetReps: 3 });
+    expect(s.machine.sets[0][0].reps).toBe(3); // 다른 세트는 그대로
+  });
+
+  it("미수행 세트도 반복 수를 고칠 수 있다", () => {
+    const s = setSetReps(completed(), 1, 0, 1);
+    expect(s.machine.sets[1][0]).toMatchObject({ status: "notDone", reps: 1 });
+  });
+
+  it("0~50 범위로 맞춘다(범위 밖·소수는 가까운 값으로)", () => {
+    const c = completed();
+    expect(setSetReps(c, 0, 0, -5).machine.sets[0][0].reps).toBe(0);
+    expect(setSetReps(c, 0, 0, 999).machine.sets[0][0].reps).toBe(50);
+    expect(setSetReps(c, 0, 0, 2.6).machine.sets[0][0].reps).toBe(3);
+  });
+
+  it("값이 같으면 같은 객체를 돌려주고, 없는 세트는 무시한다", () => {
+    const c = completed();
+    expect(setSetReps(c, 0, 0, 3)).toBe(c);
+    expect(setSetReps(c, 9, 0, 1)).toBe(c);
+    expect(setSetReps(c, 0, 9, 1)).toBe(c);
+  });
+
+  it("운동 중에는 고칠 수 없다", () => {
+    const running = run(startSession(createSession(routine), 0), 0, 4000);
+    expect(setSetReps(running, 0, 0, 1)).toBe(running);
   });
 });

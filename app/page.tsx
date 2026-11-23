@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import EndDialog from "@/components/EndDialog";
+import Finish from "@/components/Finish";
 import Home from "@/components/Home";
 import Progress from "@/components/Progress";
 import Ready from "@/components/Ready";
@@ -126,20 +127,8 @@ export default function Page() {
         );
       }
 
-      // COMPLETED 등: ⚠ 임시 화면. 종료 화면(반복 수 확인·저장)은 작업 19·20에서 만든다
-      return (
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 py-6">
-          <h1 className="text-3xl font-bold">운동 끝!</h1>
-          <p className="text-sm text-muted">임시 화면: 종료·저장 화면은 작업 19·20에서 만듭니다.</p>
-          <button
-            type="button"
-            onClick={goHome}
-            className="min-h-11 rounded-xl bg-surface px-4 text-base"
-          >
-            홈으로
-          </button>
-        </main>
-      );
+      // COMPLETED: 종료 화면. 세트별 반복 수를 확인·수정한다(저장 버튼은 작업 20에서 만든다)
+      return <Finish session={session} onEditReps={workout.editReps} onHome={goHome} />;
     }
 
     // ── 첫 운동 준비 화면 ──
