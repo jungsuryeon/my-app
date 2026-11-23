@@ -75,6 +75,7 @@ export default function Page() {
             nowMs={workout.nowMs}
             onPause={workout.pause}
             onResume={workout.resume}
+            awayPaused={workout.awayPaused}
             onSkip={workout.skip}
             onEnd={openEndDialog}
           />

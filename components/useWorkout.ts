@@ -26,6 +26,7 @@ import {
   type SessionExercise,
 } from "@/lib/session";
 import { createSoundEngine } from "@/lib/sound";
+import { keepAudioAlive, watchVisibility } from "@/lib/lifecycle";
 import { createTicker, elapsedMs } from "@/lib/timer";
 
 /** 지금 상태에서 낼 안내 전체 */
@@ -67,6 +68,8 @@ const ACTIVE = ["COUNTDOWN", "EXERCISE", "REST"];
 export function useWorkout() {
   const [session, setSession] = useState<Session | null>(null);
   const [nowMs, setNowMs] = useState(0);
+  // 화면 이탈·틱 끊김으로 자동 일시정지된 상태인가(안내 문구를 보여 주기 위함)
+  const [awayPaused, setAwayPaused] = useState(false);
   const sessionRef = useRef<Session | null>(null);
   // 소리 엔진은 처음 한 번만 만들어 계속 쓴다(이미 낸 안내 ID 기록을 유지하기 위함)
   const [engine] = useState(() =>
@@ -119,6 +122,7 @@ export function useWorkout() {
         const now = performance.now();
         engine.pause();
         setNowMs(now);
+        setAwayPaused(false);
         commit(pauseSession(s, now));
       }),
     [commit, engine, guard],
@@ -132,6 +136,7 @@ export function useWorkout() {
         if (!s) return;
         const now = performance.now();
         setNowMs(now);
+        setAwayPaused(false);
         commit(resumeSession(s, now));
       }),
     [commit, guard],
@@ -193,9 +198,27 @@ export function useWorkout() {
     commit(endSession(s));
   }, [commit, engine]);
 
+  /**
+   * 자동 일시정지: 화면을 벗어났거나 틱이 끊겼을 때. atMs 시각에 멈춘 것으로 처리한다.
+   * 화면 이탈은 "지금", 틱 끊김은 "끊기기 전 마지막 정상 시각"을 넘겨서 벗어나 있던 시간이 빠지게 한다.
+   * 복귀해도 저절로 이어가지 않고 사용자가 "이어하기"를 누르게 한다.
+   */
+  const autoPause = useCallback(
+    (atMs: number) => {
+      const s = sessionRef.current;
+      if (!s || !ACTIVE.includes(s.machine.phase)) return;
+      engine.pause();
+      setNowMs(atMs);
+      setAwayPaused(true);
+      commit(pauseSession(s, atMs));
+    },
+    [commit, engine],
+  );
+
   /** 세션을 버리고 홈으로 돌아갈 때 */
   const exit = useCallback(() => {
     engine.pause();
+    setAwayPaused(false);
     commit(null);
   }, [commit, engine]);
 
@@ -203,18 +226,32 @@ export function useWorkout() {
 
   useEffect(() => {
     if (!active) return;
-    const ticker = createTicker((now) => {
-      const s = sessionRef.current;
-      if (!s) return;
-      // 소리는 "넘어가기 전" 상태 기준으로 낸다(운동이 끝나는 순간의 세트 완료 안내가 빠지지 않게)
-      engine.emit(cuesFor(s), elapsedMs(s.clock, now), now);
-      const next = tick(s, now);
-      if (next !== s) commit(next);
-      setNowMs(now);
-    });
+    const ticker = createTicker(
+      (now) => {
+        const s = sessionRef.current;
+        if (!s) return;
+        // 소리는 "넘어가기 전" 상태 기준으로 낸다(운동이 끝나는 순간의 세트 완료 안내가 빠지지 않게)
+        engine.emit(cuesFor(s), elapsedMs(s.clock, now), now);
+        const next = tick(s, now);
+        if (next !== s) commit(next);
+        setNowMs(now);
+      },
+      // 틱이 2초 이상 끊기면(화면 잠금 등) 끊기기 전 마지막 정상 시각에 멈춘 것으로 처리한다
+      { onGap: (_gap, lastTickMs) => autoPause(lastTickMs) },
+    );
     ticker.start();
     return ticker.stop;
-  }, [active, commit, engine]);
+  }, [active, commit, engine, autoPause]);
 
-  return { session, nowMs, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
+  // 화면에서 벗어나면(다른 앱 이동·화면 잠금) 자동 일시정지, 돌아오면 끊긴 오디오를 다시 깨운다
+  useEffect(() => {
+    const stopWatch = watchVisibility({ onHidden: () => autoPause(performance.now()) });
+    const stopAudio = keepAudioAlive();
+    return () => {
+      stopWatch();
+      stopAudio();
+    };
+  }, [autoPause]);
+
+  return { session, nowMs, awayPaused, begin, startNext, pause, resume, skip, requestEnd, cancelEnd, finish, exit };
 }

@@ -11,6 +11,8 @@ type Props = {
   onPause: () => void;
   /** 이어하기 버튼 */
   onResume: () => void;
+  /** 화면 이탈·틱 끊김으로 자동 일시정지된 상태인가 */
+  awayPaused: boolean;
   /** 현재 세트 건너뛰기(운동 중에만 켜짐) */
   onSkip: () => void;
   /** 전체 종료(확인창을 띄운다) */
@@ -19,7 +21,7 @@ type Props = {
 
 // 운동 진행 화면: COUNTDOWN / EXERCISE / REST 세 상태를 보여 준다.
 // 계산은 하지 않고 lib/의 결과만 보여 준다.
-export default function Progress({ session, nowMs, onPause, onResume, onSkip, onEnd }: Props) {
+export default function Progress({ session, nowMs, onPause, onResume, awayPaused, onSkip, onEnd }: Props) {
   const m = session.machine;
   const ex = session.exercises[m.exerciseIndex];
   const el = elapsedMs(session.clock, nowMs);
@@ -79,6 +81,11 @@ export default function Progress({ session, nowMs, onPause, onResume, onSkip, on
           {big}
         </p>
         <p className="text-2xl text-muted">{sub}</p>
+        {paused && awayPaused && (
+          <p role="alert" className="mt-4 text-center text-base text-amber-200">
+            화면에서 벗어나 일시정지했어요. 이어하기를 눌러 계속하세요.
+          </p>
+        )}
 
         {gauge !== null && (
           <div

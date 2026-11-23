@@ -52,8 +52,12 @@ export type TickerOptions = {
   maxGapMs?: number;
   /** 시각 공급 함수. 기본은 performance.now(). 시험에서 가짜 시각을 넣을 때 쓴다. */
   now?: () => number;
-  /** 틱이 maxGapMs 이상 끊겼을 때. 이 틱에서는 onTick을 부르지 않는다. 자동 PAUSED 처리는 작업 16에서 연결한다. */
-  onGap?: (gapMs: number) => void;
+  /**
+   * 틱이 maxGapMs 이상 끊겼을 때. 이 틱에서는 onTick을 부르지 않는다.
+   * lastTickMs는 끊기기 전 마지막으로 정상이었던 시각이다. 자동 일시정지는 "지금"이 아니라
+   * 이 시각에 멈춘 것으로 처리해야, 끊겨 있던(화면을 벗어난) 시간이 운동·휴식 시간에서 빠진다.
+   */
+  onGap?: (gapMs: number, lastTickMs: number) => void;
 };
 
 export type Ticker = {
@@ -91,9 +95,10 @@ export function createTicker(
       handle = setInterval(() => {
         const t = now();
         const gap = t - lastTickAt;
+        const previous = lastTickAt;
         lastTickAt = t;
         if (gap >= maxGapMs) {
-          options.onGap?.(gap);
+          options.onGap?.(gap, previous);
           return;
         }
         onTick(t);

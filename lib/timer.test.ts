@@ -147,6 +147,8 @@ describe("틱 (주기적 확인)", () => {
     expect(onTick).toHaveBeenCalledTimes(2);
     expect(onGap).toHaveBeenCalledTimes(1);
     expect(onGap.mock.calls[0][0]).toBeGreaterThanOrEqual(2000);
+    // 두 번째 값은 끊기기 전 마지막 정상 틱 시각(500) — 자동 일시정지를 이 시각에 맞춘다
+    expect(onGap.mock.calls[0][1]).toBe(500);
     advance(250); // 그 다음 틱은 다시 정상
     expect(onTick).toHaveBeenCalledTimes(3);
   });
