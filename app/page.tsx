@@ -73,7 +73,11 @@ export default function Page() {
           className="mx-auto flex w-full max-w-md items-start justify-between gap-3 bg-amber-300/15 px-4 py-3 text-sm text-amber-100"
         >
           <span>{notice}</span>
-          <button type="button" onClick={() => setNotice(null)} className="min-h-6 shrink-0 underline">
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            className="-my-2 -mr-2 min-h-11 min-w-11 shrink-0 px-2 underline"
+          >
             닫기
           </button>
         </div>
@@ -102,7 +106,10 @@ export default function Page() {
               exerciseIndex={idx}
               onBack={openEndDialog}
               backLabel="전체 종료"
-              onStart={(values) => workout.startNext(values)}
+              onStart={(values) => {
+                setNotice(null); // 이전 안내(저장 완료 등)는 새 운동을 시작하면 지운다
+                workout.startNext(values);
+              }}
             />
             {dialog}
           </>
@@ -151,6 +158,7 @@ export default function Page() {
           exerciseIndex={0}
           onBack={() => setSelected(null)}
           onStart={(values) => {
+            setNotice(null); // 이전 안내(저장 완료 등)는 새 운동을 시작하면 지운다
             // 고친 값을 첫 운동에 반영해 세션을 시작한다
             const exercises = selected.exercises.map((e, i) => (i === 0 ? { ...e, ...values } : e));
             workout.begin(exercises, { id: selected.id, name: selected.name });
