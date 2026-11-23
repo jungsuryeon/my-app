@@ -129,7 +129,21 @@ export function playBeep(kind: BeepKind, delaySec = 0): boolean {
 // 소리 우선순위·4초 제한·음성 실패 시 비프 대체는 작업 11에서 이어서 붙인다.
 
 export type VoiceLike = { lang: string; name: string; localService?: boolean };
-export type UtteranceLike = { lang: string; voice: unknown; rate: number; volume: number };
+export type UtteranceLike = {
+  lang: string;
+  voice: unknown;
+  rate: number;
+  volume: number;
+  onend?: (() => void) | null;
+  onerror?: ((e: { error?: string }) => void) | null;
+};
+/** 음성 재생 결과를 받는 쪽 */
+export type SpeakCallbacks = {
+  /** 끝까지 말했을 때 */
+  onEnd?: () => void;
+  /** 재생에 실패했을 때. 우리가 직접 취소해서 생기는 중단(interrupted·canceled)은 실패로 치지 않는다. */
+  onError?: () => void;
+};
 export type SynthLike = {
   getVoices: () => VoiceLike[];
   speak: (u: never) => void;
@@ -187,7 +201,7 @@ export function createSpeaker(deps: {
       return voice !== null;
     },
     /** 말한다. 새 음성을 시작하기 전에는 항상 재생 중인 음성을 취소한다. 한국어 음성이 없으면 false(호출 쪽이 비프로 대체). */
-    speak(text: string, volume = 1): boolean {
+    speak(text: string, volume = 1, cb: SpeakCallbacks = {}): boolean {
       if (!voice) return false;
       deps.synth.cancel();
       const u = deps.makeUtterance(text);
@@ -195,6 +209,11 @@ export function createSpeaker(deps: {
       u.voice = voice;
       u.rate = 1;
       u.volume = volume;
+      u.onend = () => cb.onEnd?.();
+      u.onerror = (e) => {
+        if (e?.error === "interrupted" || e?.error === "canceled") return;
+        cb.onError?.();
+      };
       deps.synth.speak(u as never);
       return true;
     },
@@ -232,10 +251,10 @@ export function initSpeech(): boolean {
 }
 
 /** 한국어로 말한다. 음성을 못 켰거나 한국어 음성이 없으면 false. */
-export function speakKorean(text: string): boolean {
+export function speakKorean(text: string, cb?: SpeakCallbacks): boolean {
   if (!speaker) return false;
   try {
-    return speaker.speak(text);
+    return speaker.speak(text, 1, cb);
   } catch {
     return false;
   }
@@ -247,5 +266,17 @@ export function cancelSpeech(): void {
     speaker?.cancel();
   } catch {
     // 취소 실패는 무시한다
+  }
+}
+
+/**
+ * 전화·알림·화면 잠금으로 오디오가 멈췄다면 다시 깨운다. 화면에 돌아왔을 때 부른다.
+ * 백그라운드에서 못 낸 안내를 몰아서 내지는 않는다(예정 시각이 지난 안내는 버려진다).
+ */
+export function resumeAudio(): void {
+  try {
+    if (ctx && ctx.state !== "running" && ctx.state !== "closed") void ctx.resume();
+  } catch {
+    // 재개 실패는 무시한다. 다음 탭에서 initAudio()가 다시 켠다.
   }
 }

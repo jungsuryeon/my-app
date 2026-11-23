@@ -1,15 +1,22 @@
-// 안내(소리) 시각 계산 (PLAN 작업 9, PRD M2 · DESIGN §2.2-3 · §3.5)
-// "언제 어떤 소리를 낼지"만 계산한다. 소리를 내는 일은 audio.ts가 한다.
-// 이 작업에서는 휴식 마지막 3·2·1초 비프만 다룬다. 중복 방지·우선순위·지각 판정은 작업 11에서 이어서 붙인다.
+// 안내(소리) 시각 계산 (PLAN 작업 9~11, PRD M2 · DESIGN §2.2-3 · §3.5)
+// "언제 어떤 소리를 낼지"만 계산한다. 소리를 내는 일은 audio.ts, 겹침·우선순위 판단은 sound.ts가 한다.
 
 import type { BeepKind } from "./audio";
+
+/** 음성이 안 나올 때 대신 낼 비프 하나 (delaySec: 안내 시각으로부터 몇 초 뒤) */
+export type FallbackBeep = { kind: BeepKind; delaySec: number };
 
 /** 안내 하나: 어떤 소리를, 상태가 시작된 뒤 몇 ms 시점에 낼지 */
 export type Cue = {
   /** 안내 ID `상태-운동-세트-번호`. 같은 ID는 한 번만 낸다(PRD) */
   id: string;
-  kind: BeepKind;
-  /** 이 상태(휴식)가 시작된 뒤의 시각(ms) */
+  /** 낼 비프. 없으면 음성만 */
+  kind?: BeepKind;
+  /** 말할 음성 문구. 없으면 비프만 */
+  voice?: string;
+  /** 음성을 쓸 수 없을 때 비프로 대체하는 소리(세트 완료의 긴 비프는 kind로 이미 낸 뒤 이어서) */
+  voiceFallback?: FallbackBeep[];
+  /** 이 상태(운동·휴식·카운트다운)가 시작된 뒤의 시각(ms) */
   atMs: number;
 };
 
@@ -82,3 +89,59 @@ export const MIXED_MODE: Record<SoundEvent, "beep" | "voice"> = {
   routineDone: "voice",
   restCountdown: "beep",
 };
+
+// ───────────────────────── 안내 만들기 (PLAN 작업 11) ─────────────────────────
+
+/** 운동 시작 음성. "운동 시작" 탭 순간에 낸다. */
+export function startCue(): Cue {
+  return { id: "START", voice: PHRASES.start, atMs: 0 };
+}
+
+/** 시작 전 3초 카운트다운: 3·2·1 비프를 0·1·2초 시점에 낸다 */
+export function countdownCues(exerciseIndex: number, setIndex: number): Cue[] {
+  return [3, 2, 1].map((n, i) => ({
+    id: `COUNTDOWN-${exerciseIndex}-${setIndex}-${n}`,
+    kind: "countdown" as const,
+    atMs: i * 1000,
+  }));
+}
+
+/** 휴식 시작 안내를 음성으로 못 낼 때: 짧은 비프 2회(PRD). 긴 세트 완료 비프(0.7초) 뒤에 이어서 낸다. */
+const REST_START_FALLBACK: FallbackBeep[] = [
+  { kind: "rep", delaySec: 0.9 },
+  { kind: "rep", delaySec: 1.15 },
+];
+
+/**
+ * 한 세트의 반복 안내를 만든다.
+ * - n번째 반복 비프는 EXERCISE 시작 후 n×템포초에 낸다.
+ * - 마지막 반복에는 반복 비프 대신 세트 완료음(긴 비프)과 음성을 낸다.
+ * @param finalPhrase 마지막 반복에서 말할 문구(세트 완료+휴식, 또는 운동 완료, 또는 루틴 완료)
+ * @param restFollows 이어서 휴식이 있는가. 있으면 음성 실패 시 짧은 비프 2회로 휴식 시작을 알린다.
+ */
+export function setCues(p: {
+  exerciseIndex: number;
+  setIndex: number;
+  reps: number;
+  tempoSec: number;
+  finalPhrase: string;
+  restFollows: boolean;
+}): Cue[] {
+  const cues: Cue[] = [];
+  for (let n = 1; n <= p.reps; n++) {
+    const id = `EXERCISE-${p.exerciseIndex}-${p.setIndex}-${n}`;
+    const atMs = n * p.tempoSec * 1000;
+    if (n < p.reps) {
+      cues.push({ id, kind: "rep", atMs });
+    } else {
+      cues.push({
+        id,
+        kind: "setDone",
+        voice: p.finalPhrase,
+        voiceFallback: p.restFollows ? REST_START_FALLBACK : [],
+        atMs,
+      });
+    }
+  }
+  return cues;
+}
