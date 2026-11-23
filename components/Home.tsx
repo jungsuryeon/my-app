@@ -16,14 +16,10 @@ type Recent = { kind: "none" } | { kind: "line"; text: string } | { kind: "unrea
 type Props = {
   /** 루틴 카드를 누르면 그 루틴의 복사본으로 호출(시작 전 값 수정이 원본을 바꾸지 않도록) */
   onSelectRoutine: (routine: Routine) => void;
-  /** "운동 기록 보기" 버튼: 캘린더 화면으로 */
-  onOpenCalendar: () => void;
-  /** "운동 찾기" 버튼: 운동 검색 화면으로 */
-  onOpenSearch: () => void;
 };
 
-// 홈 화면. 닉네임·최근 기록·데이터 초기화는 이후 작업에서 채운다.
-export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: Props) {
+// 홈 탭. 닉네임, 최근 기록, 기본 루틴, 내 루틴, 데이터 초기화를 보여 준다(캘린더·운동 찾기는 하단 탭으로 간다).
+export default function Home({ onSelectRoutine }: Props) {
   // 처음 그릴 때는 기록이 없는 것으로 두고(서버 화면과 같게), 그려진 뒤에 저장소에서 읽는다
   const [recent, setRecent] = useState<Recent>({ kind: "none" });
   // 닉네임 상태. null = 아직 읽기 전(입력 카드가 번쩍 보였다 사라지지 않게 읽기 전에는 아무것도 안 보인다)
@@ -202,18 +198,11 @@ export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: 
               ? "저장된 기록을 읽을 수 없어요"
               : "아직 기록이 없습니다"}
         </p>
-        <button
-          type="button"
-          onClick={onOpenCalendar}
-          className="mt-3 min-h-11 w-full rounded-xl bg-white/10 px-4 font-bold"
-        >
-          운동 캘린더 보기
-        </button>
       </section>
 
       <section aria-labelledby="routine-title" className="flex flex-col gap-3">
         <h2 id="routine-title" className="text-sm font-medium text-muted">
-          루틴
+          기본 루틴
         </h2>
         {SAMPLE_ROUTINES.map((r) => (
           <button
@@ -231,13 +220,6 @@ export default function Home({ onSelectRoutine, onOpenCalendar, onOpenSearch }: 
             </span>
           </button>
         ))}
-        <button
-          type="button"
-          onClick={onOpenSearch}
-          className="min-h-14 rounded-2xl bg-white/10 px-4 text-lg font-bold"
-        >
-          운동 찾기
-        </button>
       </section>
 
       {myRoutines === "unreadable" && (

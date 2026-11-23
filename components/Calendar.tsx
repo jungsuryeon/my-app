@@ -17,13 +17,8 @@ import { countSets, deleteRecord, loadRecords, type WorkoutRecord } from "@/lib/
 import DeleteRecordDialog from "./DeleteRecordDialog";
 import RecordDetail, { recordTitle } from "./RecordDetail";
 
-type Props = {
-  /** 홈으로 돌아간다 */
-  onBack: () => void;
-};
-
 // 운동 기록 캘린더. 운동한 날에 점을 찍고, 날짜를 누르면 그 날의 기록을, 기록을 누르면 상세를 보여 준다.
-export default function Calendar({ onBack }: Props) {
+export default function Calendar() {
   // null = 아직 읽기 전, "unreadable" = 읽을 수 없음
   const [records, setRecords] = useState<WorkoutRecord[] | "unreadable" | null>(null);
   // 처음 그릴 때는 서버 화면과 같도록 비워 두고, 그려진 뒤 오늘 날짜로 채운다
@@ -85,15 +80,7 @@ export default function Calendar({ onBack }: Props) {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
-      <header className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="홈으로"
-          className="-ml-2 min-h-11 min-w-11 rounded-xl px-2 text-lg"
-        >
-          ←
-        </button>
+      <header>
         <h1 className="text-2xl font-bold">운동 기록</h1>
       </header>
 

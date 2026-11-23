@@ -8,6 +8,7 @@ import Finish from "@/components/Finish";
 import Home from "@/components/Home";
 import Progress from "@/components/Progress";
 import Ready from "@/components/Ready";
+import TabBar, { TAB_BAR_PADDING, type Tab } from "@/components/TabBar";
 import { useWorkout } from "@/components/useWorkout";
 import { loadSnapshot } from "@/lib/records";
 import type { Routine } from "@/lib/routines";
@@ -24,10 +25,8 @@ export default function Page() {
 
   // 복원했을 때 보여 주는 안내 문구(닫을 수 있다)
   const [notice, setNotice] = useState<string | null>(null);
-  // 홈 대신 운동 캘린더를 보여 주는가(세션이 없을 때만 의미가 있다)
-  const [showCalendar, setShowCalendar] = useState(false);
-  // 홈 대신 운동 찾기 화면을 보여 주는가
-  const [showSearch, setShowSearch] = useState(false);
+  // 하단 탭에서 보고 있는 화면(운동을 준비·진행하는 동안에는 탭이 숨겨지고 이 값은 쓰이지 않는다)
+  const [tab, setTab] = useState<Tab>("home");
 
   // 화면이 그려진 뒤 한 번, 저장해 둔 진행 상태가 있으면 되살린다(localStorage는 여기서만 읽는다)
   const { restore } = workout;
@@ -47,6 +46,7 @@ export default function Page() {
     setSelected(null);
     setEndDialog(null);
     setNotice(null);
+    setTab("home");
   }
 
   /** "전체 종료" 탭: 진행 중이면 먼저 멈추고 확인창을 연다 */
@@ -173,16 +173,15 @@ export default function Page() {
       );
     }
 
-    if (showSearch) {
+    // ── 탭 화면(홈·운동 찾기·운동 기록) ──
+    if (tab === "search") {
       return (
         <ExerciseSearch
-          onBack={() => setShowSearch(false)}
           onSaved={() => {
-            setShowSearch(false);
+            setTab("home");
             setNotice("내 루틴을 저장했어요.");
           }}
           onStart={(routine) => {
-            setShowSearch(false);
             setNotice(null);
             setSelected(routine); // 임시 루틴: 저장하지 않고 기존 준비 화면·타이머로 연결
           }}
@@ -190,23 +189,25 @@ export default function Page() {
       );
     }
 
-    if (showCalendar) {
-      return <Calendar onBack={() => setShowCalendar(false)} />;
-    }
+    if (tab === "records") return <Calendar />;
 
-    return (
-      <Home
-        onOpenCalendar={() => setShowCalendar(true)}
-        onOpenSearch={() => setShowSearch(true)}
-        onSelectRoutine={(routine) => setSelected(routine)}
-      />
-    );
+    return <Home onSelectRoutine={(routine) => setSelected(routine)} />;
   })();
+
+  // 운동을 준비·진행하는 화면에서는 탭을 그리지 않는다
+  const showTabs = !session && !selected;
 
   return (
     <>
       {banners}
-      {screen}
+      {showTabs ? (
+        <>
+          <div className={`flex flex-1 flex-col ${TAB_BAR_PADDING}`}>{screen}</div>
+          <TabBar active={tab} onChange={setTab} />
+        </>
+      ) : (
+        screen
+      )}
     </>
   );
 }

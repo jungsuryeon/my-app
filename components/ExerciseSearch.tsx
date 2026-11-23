@@ -18,8 +18,6 @@ import {
 import type { Routine } from "@/lib/routines";
 
 type Props = {
-  /** 홈으로 돌아간다 */
-  onBack: () => void;
   /** "이 운동으로 시작": 만든 임시 루틴을 기존 준비 화면으로 넘긴다 */
   onStart: (routine: Routine) => void;
   /** 내 루틴을 저장했을 때(홈으로 돌아가 안내를 보여 준다) */
@@ -87,7 +85,7 @@ function GifView({ item }: { item: CatalogExercise }) {
 }
 
 // 운동 찾기: 한국어 운동 목록에서 찾고, 고른 운동의 동작 GIF를 보고, 그 운동으로 바로 시작한다.
-export default function ExerciseSearch({ onBack, onStart, onSaved }: Props) {
+export default function ExerciseSearch({ onStart, onSaved }: Props) {
   // 루틴으로 저장할 담은 운동(key 순서 = 루틴 순서)
   const [cart, setCart] = useState<string[]>([]);
   const [building, setBuilding] = useState(false);
@@ -258,15 +256,7 @@ export default function ExerciseSearch({ onBack, onStart, onSaved }: Props) {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
-      <header className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="홈으로"
-          className="-ml-2 min-h-11 min-w-11 rounded-xl px-2 text-lg"
-        >
-          ←
-        </button>
+      <header>
         <h1 className="text-2xl font-bold">운동 찾기</h1>
       </header>
 
@@ -354,7 +344,7 @@ export default function ExerciseSearch({ onBack, onStart, onSaved }: Props) {
         <button
           type="button"
           onClick={() => setBuilding(true)}
-          className="sticky bottom-4 mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black shadow-lg"
+          className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-auto min-h-14 rounded-2xl bg-accent px-4 text-lg font-bold text-black shadow-lg"
         >
           담은 운동 {cart.length}개 · 루틴 만들기
         </button>
