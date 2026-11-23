@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { greeting, loadProfile, saveProfile, validateNickname, NICKNAME_MAX, type ProfileState } from "@/lib/profile";
 import { formatRecordLine, latestRecord, loadRecords } from "@/lib/records";
 import { SAMPLE_ROUTINES } from "@/lib/routines";
+import { clearAll } from "@/lib/storage";
+import ResetDialog from "./ResetDialog";
 
 /** 최근 기록 칸에 보여 줄 내용 */
 type Recent = { kind: "none" } | { kind: "line"; text: string } | { kind: "unreadable" };
@@ -21,6 +23,8 @@ export default function Home({ onSelectRoutine }: Props) {
   const [profile, setProfile] = useState<ProfileState | null>(null);
   const [nickInput, setNickInput] = useState("");
   const [nickError, setNickError] = useState<string | null>(null);
+  // 데이터 초기화 확인창. null = 닫힘, 문자열 = 열림(값은 삭제 실패 안내, 빈 문자열이면 안내 없음)
+  const [resetDialog, setResetDialog] = useState<string | null>(null);
 
   useEffect(() => {
     const r = loadRecords();
@@ -59,6 +63,20 @@ export default function Home({ onSelectRoutine }: Props) {
   function handleSkipNickname() {
     saveProfile(null); // 저장에 실패해도 이번에는 그냥 넘어간다(다음에 다시 물어볼 수 있다)
     setProfile({ kind: "set", nickname: null });
+  }
+
+  /** 확인창에서 "삭제"를 눌렀을 때: 이 앱의 저장 데이터를 모두 지우고 화면을 처음 상태로 되돌린다 */
+  function handleReset() {
+    const r = clearAll();
+    if (!r.ok) {
+      setResetDialog("삭제하지 못했어요. 브라우저 설정을 확인한 뒤 다시 시도해 주세요.");
+      return;
+    }
+    setResetDialog(null);
+    setRecent({ kind: "none" });
+    setProfile({ kind: "none" }); // 닉네임을 새로 물어본다
+    setNickInput("");
+    setNickError(null);
   }
 
   const hello = profile?.kind === "set" ? greeting(profile.nickname) : null;
@@ -158,6 +176,22 @@ export default function Home({ onSelectRoutine }: Props) {
           </button>
         ))}
       </section>
+
+      <button
+        type="button"
+        onClick={() => setResetDialog("")}
+        className="mt-auto min-h-11 self-center rounded-xl px-4 text-sm text-muted underline"
+      >
+        데이터 초기화
+      </button>
+
+      {resetDialog !== null && (
+        <ResetDialog
+          error={resetDialog || null}
+          onCancel={() => setResetDialog(null)}
+          onConfirm={handleReset}
+        />
+      )}
     </main>
   );
 }
