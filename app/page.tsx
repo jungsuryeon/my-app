@@ -230,7 +230,12 @@ export default function Page() {
       {banners}
       {showTabs ? (
         <>
-          <div className={`flex flex-1 flex-col ${TAB_BAR_PADDING}`}>{screen}</div>
+          <div className={`flex flex-1 flex-col ${TAB_BAR_PADDING}`}>
+            {/* 탭이 바뀔 때마다 새로 그려져 짧게 떠오른다 */}
+            <div key={tab} className="screen-in flex flex-1 flex-col">
+              {screen}
+            </div>
+          </div>
           <TabBar active={tab} onChange={setTab} />
         </>
       ) : (

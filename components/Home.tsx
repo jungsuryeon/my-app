@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { copyRoutine, deleteRoutine, loadMyRoutines } from "@/lib/myRoutines";
 import { loadPrefs, savePrefs, showDefaultRoutines, type PrefsState } from "@/lib/prefs";
 import { greeting, loadProfile, type ProfileState } from "@/lib/profile";
@@ -11,6 +11,9 @@ import DeleteRecordDialog from "./DeleteRecordDialog";
 import Mascot from "./Mascot";
 import SettingsSheet from "./SettingsSheet";
 import type { Tab } from "./TabBar";
+
+/** 카드 등장 순서(globals.css의 .rise가 --i 값만큼 늦게 시작한다) */
+const stagger = (i: number) => ({ "--i": i }) as CSSProperties;
 
 /** 최근 기록 칸에 보여 줄 내용 */
 type Recent = { kind: "none" } | { kind: "line"; text: string } | { kind: "unreadable" };
@@ -187,7 +190,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
             type="button"
             onClick={() => setSettingsOpen(true)}
             aria-label="설정"
-            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-2xl bg-surface text-muted shadow-card active:opacity-70"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-2xl bg-surface text-muted shadow-card press active:opacity-70"
           >
             <GearIcon />
           </button>
@@ -203,7 +206,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
       </header>
 
       {/* 1. 내 루틴 */}
-      <section aria-labelledby="mine-title" className="flex flex-col gap-3">
+      <section style={stagger(0)} aria-labelledby="mine-title" className="rise flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <h2 id="mine-title">
             <SectionTitle
@@ -219,7 +222,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
           <button
             type="button"
             onClick={onCreateRoutine}
-            className="min-h-11 rounded-full bg-lavender px-4 text-base font-bold text-lavender-ink shadow-card active:opacity-80"
+            className="min-h-11 rounded-full bg-lavender px-4 text-base font-bold text-lavender-ink shadow-card press active:opacity-80"
           >
             + 루틴 만들기
           </button>
@@ -239,7 +242,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
             <button
               type="button"
               onClick={() => onSelectRoutine(copyRoutine(r))}
-              className="flex min-h-[5.5rem] min-w-0 flex-1 items-center gap-3 rounded-3xl px-4 py-3 text-left active:opacity-80"
+              className="flex min-h-[5.5rem] min-w-0 flex-1 items-center gap-3 rounded-3xl px-4 py-3 text-left press active:opacity-80"
             >
               <RoutineArt src="/mascot/routine-custom.webp" tone="peach" />
               <span className="min-w-0 flex-1">
@@ -271,7 +274,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
 
       {/* 처음 한 번: 기본 루틴을 쓸지 묻는다 */}
       {askDefaults && (
-        <section aria-labelledby="defaults-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
+        <section style={stagger(1)} aria-labelledby="defaults-title" className="rise flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
           <h2 id="defaults-title" className="text-base font-bold">
             기본 루틴을 쓸까요?
           </h2>
@@ -296,7 +299,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
 
       {/* 2. 기본 루틴(숨길 수 있다. 다시 보이기는 설정 시트) */}
       {defaultsVisible && (
-        <section aria-labelledby="routine-title" className="flex flex-col gap-3">
+        <section style={stagger(2)} aria-labelledby="routine-title" className="rise flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <h2 id="routine-title">
               <SectionTitle>기본 루틴</SectionTitle>
@@ -305,7 +308,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
               <button
                 type="button"
                 onClick={() => chooseDefaults("hide")}
-                className="min-h-11 rounded-full bg-chip px-4 text-sm text-muted active:opacity-80"
+                className="min-h-11 rounded-full bg-chip px-4 text-sm text-muted press active:opacity-80"
               >
                 숨기기
               </button>
@@ -322,7 +325,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
                   if (routine) onSelectRoutine(routine);
                 }}
                 aria-label={`${r.name} 시작`}
-                className={`flex min-h-[7rem] items-center gap-3 rounded-3xl ${s.card} p-4 text-left shadow-card active:opacity-80`}
+                className={`flex min-h-[7rem] items-center gap-3 rounded-3xl ${s.card} p-4 text-left shadow-card press active:opacity-80`}
               >
                 <RoutineArt src={s.art} tone={s.tone} />
                 <span className="min-w-0 flex-1">
@@ -339,7 +342,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
       )}
 
       {/* 3. 최근 기록 */}
-      <section aria-labelledby="recent-title" className="flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
+      <section style={stagger(3)} aria-labelledby="recent-title" className="rise flex flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
         <h2 id="recent-title" className="flex items-center gap-2 text-lg font-bold">
           <span className="text-accent-ink">
             <CalendarIcon />
@@ -368,7 +371,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
         <button
           type="button"
           onClick={() => onGoTab("records")}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-base font-bold text-on-accent shadow-button active:opacity-80"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-base font-bold text-on-accent shadow-button press active:opacity-80"
         >
           <CalendarIcon />
           운동 캘린더 보기
@@ -379,7 +382,7 @@ export default function Home({ onSelectRoutine, onCreateRoutine, onEditRoutine, 
       <button
         type="button"
         onClick={() => onGoTab("search")}
-        className="flex min-h-14 items-center justify-center gap-2 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button active:opacity-80"
+        className="flex min-h-14 items-center justify-center gap-2 rounded-3xl bg-accent px-4 text-lg font-bold text-on-accent shadow-button press active:opacity-80"
       >
         <SearchIcon />
         운동 찾기
