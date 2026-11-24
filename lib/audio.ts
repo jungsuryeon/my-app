@@ -191,6 +191,16 @@ export function createSpeaker(deps: {
   makeUtterance: (text: string) => UtteranceLike;
 }) {
   let voice: VoiceLike | null = null;
+  // 처음 기다리는 시간(2초) 안에 목록이 안 채워졌어도, 나중에 채워졌다면 말하는 순간에 다시 골라 음성을 쓴다.
+  // 이미 음성을 골랐다면 다시 찾지 않는다(매번 목록을 뒤지지 않게).
+  function refreshVoice(): void {
+    if (voice) return;
+    try {
+      voice = pickKoreanVoice(deps.synth.getVoices());
+    } catch {
+      // 목록을 읽지 못하면 이번에는 비프로 대체된다
+    }
+  }
   return {
     /** 음성 목록을 기다려 한국어 음성을 고른다. 한국어 음성이 있으면 true. */
     async prepare(timeoutMs = 2000): Promise<boolean> {
@@ -198,10 +208,12 @@ export function createSpeaker(deps: {
       return voice !== null;
     },
     hasVoice(): boolean {
+      refreshVoice();
       return voice !== null;
     },
     /** 말한다. 새 음성을 시작하기 전에는 항상 재생 중인 음성을 취소한다. 한국어 음성이 없으면 false(호출 쪽이 비프로 대체). */
     speak(text: string, volume = 1, cb: SpeakCallbacks = {}): boolean {
+      refreshVoice();
       if (!voice) return false;
       deps.synth.cancel();
       const u = deps.makeUtterance(text);
@@ -253,8 +265,10 @@ export function initSpeech(): boolean {
 }
 
 /** 한국어 음성 목록 준비를 기다린다. 한국어 음성이 있으면 true, 음성을 못 켰거나 없으면 false. */
-export function waitSpeechReady(): Promise<boolean> {
-  return speechPrep ?? Promise.resolve(false);
+export async function waitSpeechReady(): Promise<boolean> {
+  const first = await (speechPrep ?? Promise.resolve(false));
+  // 처음 기다리는 시간 안에 못 찾았어도, 그 사이 목록이 채워졌을 수 있어 한 번 더 확인한다
+  return first || (speaker?.hasVoice() ?? false);
 }
 
 /** 한국어로 말한다. 음성을 못 켰거나 한국어 음성이 없으면 false. */

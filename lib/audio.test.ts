@@ -194,11 +194,29 @@ describe("음성 재생기", () => {
     expect(f.spoken).toHaveLength(0);
   });
 
-  it("준비 전에는 말하지 않는다", () => {
+  it("준비 전에도 목록에 한국어 음성이 이미 있으면 말한다(목록을 말하는 순간에 다시 확인)", () => {
     const f = fakeSynth([{ lang: "ko-KR", name: "Yuna" }]);
     const sp = createSpeaker({ synth: f.synth, makeUtterance: mk });
-    expect(sp.hasVoice()).toBe(false);
+    expect(sp.hasVoice()).toBe(true);
+    expect(sp.speak("안녕")).toBe(true);
+  });
+
+  it("처음 기다리는 시간 안에 목록이 안 채워져도, 나중에 채워지면 그때부터 음성으로 말한다", async () => {
+    const f = fakeSynth([]);
+    const sp = createSpeaker({ synth: f.synth, makeUtterance: mk });
+    expect(await sp.prepare(10)).toBe(false); // 시간 안에는 못 찾음 → 비프로 대체
     expect(sp.speak("안녕")).toBe(false);
+    f.setVoices([{ lang: "ko-KR", name: "Yuna" }]); // 나중에 목록이 채워짐
+    expect(sp.speak("안녕")).toBe(true);
+    expect(f.spoken).toHaveLength(1);
+    expect((f.spoken[0].voice as VoiceLike).name).toBe("Yuna");
+  });
+
+  it("한국어 음성이 끝내 없으면 계속 false(비프 대체)", () => {
+    const f = fakeSynth([{ lang: "en-US", name: "Samantha" }]);
+    const sp = createSpeaker({ synth: f.synth, makeUtterance: mk });
+    expect(sp.speak("안녕")).toBe(false);
+    expect(sp.hasVoice()).toBe(false);
   });
 
   it("cancel은 재생 중인 음성을 취소한다", async () => {
