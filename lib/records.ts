@@ -3,7 +3,7 @@
 // (운동 기록 저장·최근 기록 조회는 작업 20·21에서 이 파일에 추가한다)
 
 import { sessionKcal } from "./calories";
-import type { Phase, SetRecord } from "./machine";
+import { completedSetCount, type Phase, type SetRecord } from "./machine";
 import type { Exercise } from "./routines";
 import { createSession, endSession, pauseSession, type Session } from "./session";
 import { createClock } from "./timer";
@@ -151,7 +151,9 @@ export function restoreFromSnapshot(snap: Snapshot, nowDate: number): RestoreRes
   const expired = nowDate - snap.savedAt > RESTORE_LIMIT_MS;
   if (expired) {
     session = endSession(session);
-    return { kind: "expired", session, ...base, notice: NOTICES.expired };
+    // 완료한 세트가 하나도 없으면 "저장할까요?" 안내를 띄우지 않는다(종료 화면이 "기록할 세트가 없어요"라고 알려 주므로 겹치지 않게)
+    const notice = completedSetCount(session.machine) === 0 ? "" : NOTICES.expired;
+    return { kind: "expired", session, ...base, notice };
   }
   return {
     kind: "restored",

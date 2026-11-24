@@ -109,6 +109,15 @@ describe("복원: 30분 안", () => {
 });
 
 describe("복원: 30분 초과", () => {
+  it("완료한 세트가 하나도 없으면 안내 문구를 비워 종료 화면의 안내와 겹치지 않게 한다", () => {
+    const s = runTo(startSession(createSession(exercises), 0), 1000); // 카운트다운 중, 완료 세트 0개
+    const r = restoreFromSnapshot(snapAt(s, 1000), T0 + RESTORE_LIMIT_MS + 60_000);
+    expect(r.kind).toBe("expired");
+    if (r.kind === "none") throw new Error();
+    expect(r.session.machine.phase).toBe("COMPLETED");
+    expect(r.notice).toBe("");
+  });
+
   it("이어갈 수 없으므로 종료(COMPLETED)로 만들고 못 한 세트는 미수행, 진행 중이던 세트는 반복 수를 남긴다", () => {
     const s = runTo(startSession(createSession(exercises), 0), 4500); // 운동 1.5초 → 1회
     const r = restoreFromSnapshot(snapAt(s, 4500), T0 + RESTORE_LIMIT_MS + 60_000);
@@ -117,7 +126,8 @@ describe("복원: 30분 초과", () => {
     expect(r.session.machine.phase).toBe("COMPLETED");
     expect(r.session.machine.sets[0][0]).toMatchObject({ status: "notDone", reps: 1 });
     expect(r.session.machine.sets[1][0].status).toBe("notDone");
-    expect(r.notice).toBe(NOTICES.expired);
+    // 완료한 세트가 0개라 저장할 것이 없다 → 안내는 비운다(종료 화면이 알려 줌)
+    expect(r.notice).toBe("");
     expect(r.session.activeMs).toBe(1500);
   });
 
@@ -127,6 +137,8 @@ describe("복원: 30분 초과", () => {
     if (r.kind === "none") throw new Error();
     expect(r.session.machine.sets[0].map((x) => x.status)).toEqual(["done", "done"]);
     expect(r.session.machine.sets[1][0].status).toBe("notDone");
+    // 완료한 세트가 있으면 "저장할까요?" 안내를 그대로 보여 준다
+    expect(r.notice).toBe(NOTICES.expired);
   });
 });
 
