@@ -204,3 +204,29 @@ export function validateInput(input: ExerciseInput): {
     },
   };
 }
+
+/** 저장소에서 읽은 이름이 너무 길지 않은가(깨졌거나 직접 고친 값 방어). 글자(코드 포인트) 기준 */
+export function isReasonableText(v: unknown, max: number): v is string {
+  return typeof v === "string" && [...v].length <= max;
+}
+
+/**
+ * 저장소에서 읽은 값이 운동 하나로 쓸 수 있는가: 모양뿐 아니라 숫자가 상식적인 범위 안인지도 본다.
+ * (값이 깨졌거나 직접 고쳐진 경우 거대한 세트 수 등으로 앱이 멈추는 것을 막는다.
+ *  입력칸의 정확한 범위(LIMITS)보다 넉넉하게 잡아, 앞으로 입력 범위를 넓혀도 옛 저장 값이 거절되지 않게 한다)
+ */
+export function isStoredExercise(v: unknown): v is Exercise {
+  if (typeof v !== "object" || v === null) return false;
+  const e = v as Record<string, unknown>;
+  const inRange = (n: unknown, min: number, max: number) =>
+    typeof n === "number" && Number.isFinite(n) && n >= min && n <= max;
+  return (
+    isReasonableText(e.id, 100) &&
+    isReasonableText(e.name, 100) &&
+    inRange(e.reps, 1, 1000) &&
+    inRange(e.sets, 1, 20) &&
+    inRange(e.restSec, 0, 3600) &&
+    inRange(e.tempoSec, 0.1, 60) &&
+    (e.weightKg === null || inRange(e.weightKg, 0, 1000))
+  );
+}

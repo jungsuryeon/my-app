@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CatalogExercise } from "@/lib/exerciseCatalog";
+import { isSafeGifUrl } from "@/lib/exerciseDb";
 
 /** GIF 조회 결과. key로 어느 운동의 결과인지 구분한다(다른 운동으로 옮겨 가면 다시 조회) */
 type GifState = { key: string; status: "ok"; url: string } | { key: string; status: "none" | "error" };
@@ -19,7 +20,8 @@ export default function GifView({ item }: { item: CatalogExercise }) {
         if (res.status === 404) return { key: item.key, status: "none" } as const;
         if (!res.ok) return { key: item.key, status: "error" } as const;
         const body = (await res.json()) as { gifUrl?: unknown };
-        return typeof body.gifUrl === "string"
+        // 서버가 이미 검증했지만 브라우저에서도 한 번 더 확인한다(ExerciseDB의 https GIF 주소만 화면에 쓴다)
+        return isSafeGifUrl(body.gifUrl)
           ? ({ key: item.key, status: "ok", url: body.gifUrl } as const)
           : ({ key: item.key, status: "error" } as const);
       })
@@ -45,6 +47,7 @@ export default function GifView({ item }: { item: CatalogExercise }) {
           <img
             src={result.url}
             alt={`${item.name} 동작`}
+            referrerPolicy="no-referrer"
             className="max-h-72 w-full object-contain"
             onError={() => setImgFailed(result.url)}
           />

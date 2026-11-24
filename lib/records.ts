@@ -4,7 +4,7 @@
 
 import { sessionKcal } from "./calories";
 import { completedSetCount, type Phase, type SetRecord } from "./machine";
-import type { Exercise } from "./routines";
+import { isReasonableText, isStoredExercise, type Exercise } from "./routines";
 import { createSession, endSession, pauseSession, type Session } from "./session";
 import { createClock } from "./timer";
 import { STORAGE_KEYS, readItem, removeItem, writeItem } from "./storage";
@@ -80,27 +80,49 @@ function isObject(v: unknown): v is Record<string, unknown> {
 
 const PHASES: Phase[] = ["READY", "COUNTDOWN", "EXERCISE", "REST", "PAUSED", "COMPLETED"];
 
-/** 저장된 값이 스냅샷 모양인지 확인한다(깨진 값은 걸러낸다) */
+const SET_STATUSES = ["pending", "done", "skipped", "notDone"];
+
+function isFiniteNumber(v: unknown, min = 0, max = Number.MAX_SAFE_INTEGER): v is number {
+  return typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
+}
+
+/** 세트 한 칸 모양·범위 검사 */
+function isSnapshotSet(v: unknown): boolean {
+  return (
+    isObject(v) &&
+    typeof v.status === "string" &&
+    SET_STATUSES.includes(v.status) &&
+    isFiniteNumber(v.targetReps, 0, 1000) &&
+    isFiniteNumber(v.reps, 0, 1000)
+  );
+}
+
+/** 저장된 값이 스냅샷 모양인지 확인한다(깨진 값은 걸러낸다). 모양뿐 아니라 숫자 범위와 번호가 범위 안인지도 본다. */
 export function isSnapshot(v: unknown): v is Snapshot {
   if (!isObject(v)) return false;
   const exercises = v.exercises;
   const sets = v.sets;
-  if (!Array.isArray(exercises) || exercises.length === 0) return false;
+  if (!Array.isArray(exercises) || exercises.length === 0 || exercises.length > 50) return false;
+  if (!exercises.every(isStoredExercise)) return false;
   if (!Array.isArray(sets) || sets.length !== exercises.length) return false;
-  if (!sets.every((row) => Array.isArray(row) && row.length > 0)) return false;
+  if (!sets.every((row) => Array.isArray(row) && row.length > 0 && row.length <= 20 && row.every(isSnapshotSet))) {
+    return false;
+  }
   const r = v.routine;
-  if (!isObject(r) || typeof r.id !== "string" || typeof r.name !== "string") return false;
+  if (!isObject(r) || !isReasonableText(r.id, 100) || !isReasonableText(r.name, 100)) return false;
   const ei = v.exerciseIndex;
   const si = v.setIndex;
   if (typeof ei !== "number" || !Number.isInteger(ei) || ei < 0 || ei >= exercises.length) return false;
-  if (typeof si !== "number" || !Number.isInteger(si) || si < 0) return false;
+  // 세트 번호는 그 운동의 세트 수와 같은 값까지 가능하다(운동의 마지막 세트를 끝낸 직후 상태)
+  if (typeof si !== "number" || !Number.isInteger(si) || si < 0 || si > (sets[ei] as unknown[]).length) return false;
   return (
     typeof v.recordId === "string" &&
-    typeof v.savedAt === "number" &&
-    (v.startedAt === undefined || typeof v.startedAt === "number") &&
-    typeof v.activeMs === "number" &&
+    isFiniteNumber(v.savedAt) &&
+    (v.startedAt === undefined || isFiniteNumber(v.startedAt)) &&
+    isFiniteNumber(v.activeMs) &&
     typeof v.phase === "string" &&
     (PHASES as string[]).includes(v.phase) &&
+    (v.remainingMs === null || v.remainingMs === undefined || isFiniteNumber(v.remainingMs)) &&
     // PAUSED는 돌아갈 상태와 남은 시간이 있어야 이어갈 수 있다
     (v.phase !== "PAUSED" || (typeof v.pausedFrom === "string" && typeof v.remainingMs === "number"))
   );
@@ -265,8 +287,8 @@ function isRecordSet(v: unknown): v is RecordSet {
   return (
     isObject(v) &&
     (v.status === "완료" || v.status === "건너뜀" || v.status === "미수행") &&
-    typeof v.targetReps === "number" &&
-    typeof v.reps === "number"
+    isFiniteNumber(v.targetReps, 0, 1000) &&
+    isFiniteNumber(v.reps, 0, 1000)
   );
 }
 
@@ -274,18 +296,19 @@ function isRecord(v: unknown): v is WorkoutRecord {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
-    typeof v.date === "number" &&
-    (v.startedAt === undefined || typeof v.startedAt === "number") &&
+    isFiniteNumber(v.date) &&
+    (v.startedAt === undefined || isFiniteNumber(v.startedAt)) &&
     typeof v.routineId === "string" &&
-    typeof v.routineName === "string" &&
-    typeof v.activeSec === "number" &&
-    (v.kcal === undefined || typeof v.kcal === "number") &&
+    isReasonableText(v.routineName, 100) &&
+    isFiniteNumber(v.activeSec) &&
+    (v.kcal === undefined || isFiniteNumber(v.kcal, 0, 100000)) &&
     Array.isArray(v.exercises) &&
+    v.exercises.length <= 50 &&
     v.exercises.every(
       (e: unknown) =>
         isObject(e) &&
-        typeof e.name === "string" &&
-        (e.weightKg === null || typeof e.weightKg === "number") &&
+        isReasonableText(e.name, 100) &&
+        (e.weightKg === null || isFiniteNumber(e.weightKg, 0, 1000)) &&
         Array.isArray(e.sets) &&
         e.sets.every(isRecordSet),
     )

@@ -2,7 +2,7 @@
 // 이 폰의 localStorage(`reptimer:routines`)에만 저장하고 서버로 보내지 않는다. 샘플 루틴 2개는 따로 고정이다.
 
 import { CATALOG, type CatalogExercise } from "./exerciseCatalog";
-import { DEFAULTS, toInput, validateInput, type Exercise, type Routine } from "./routines";
+import { DEFAULTS, isReasonableText, isStoredExercise, toInput, validateInput, type Exercise, type Routine } from "./routines";
 import { STORAGE_KEYS, readItem, writeItem } from "./storage";
 
 export const MY_ROUTINE_LIMITS = {
@@ -40,33 +40,21 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
-function isExercise(v: unknown): v is Exercise {
-  return (
-    isObject(v) &&
-    typeof v.id === "string" &&
-    typeof v.name === "string" &&
-    typeof v.reps === "number" &&
-    typeof v.sets === "number" &&
-    typeof v.restSec === "number" &&
-    typeof v.tempoSec === "number" &&
-    (v.weightKg === null || typeof v.weightKg === "number")
-  );
-}
-
 function isRoutine(v: unknown): v is Routine {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
     v.id.startsWith(MY_ROUTINE_PREFIX) &&
-    typeof v.name === "string" &&
+    isReasonableText(v.name, MY_ROUTINE_LIMITS.nameMax * 2) &&
     Array.isArray(v.exercises) &&
     v.exercises.length > 0 &&
-    v.exercises.every(isExercise)
+    v.exercises.length <= MY_ROUTINE_LIMITS.exercisesPerRoutine &&
+    v.exercises.every(isStoredExercise)
   );
 }
 
 export function isRoutineList(v: unknown): v is Routine[] {
-  return Array.isArray(v) && v.every(isRoutine);
+  return Array.isArray(v) && v.length <= MY_ROUTINE_LIMITS.routines && v.every(isRoutine);
 }
 
 // ───────────────────────── 만들기 (순수 계산) ─────────────────────────

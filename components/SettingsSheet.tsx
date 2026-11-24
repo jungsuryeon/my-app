@@ -297,6 +297,26 @@ export default function SettingsSheet({ onClose, onProfileChange, onPrefsChange,
           </button>
         </section>
 
+        <section aria-labelledby="set-privacy" className="flex flex-col gap-2 border-t border-line pt-4">
+          <h3 id="set-privacy" className="text-sm font-medium text-muted">
+            개인정보 안내
+          </h3>
+          <ul className="list-disc space-y-1 pl-5 text-xs text-muted">
+            <li>
+              닉네임·체중·운동 기록·내 루틴은 이 폰의 브라우저에만 저장되고 서버로 보내지 않아요. 암호화되어 있지
+              않으니 폰을 함께 쓰면 다른 사람이 볼 수 있어요.
+            </li>
+            <li>
+              동작 영상(GIF)을 열면 이 폰의 IP 주소 등이 ExerciseDB에 전달될 수 있어요. 사이트 서버(Vercel)의 접속
+              기록에도 IP가 남을 수 있어요. 닉네임과 운동 기록은 보내지 않아요.
+            </li>
+            <li>
+              브라우저 데이터를 지우거나 오래 쓰지 않으면(특히 iPhone Safari) 저장된 기록이 사라질 수 있어요. 아래
+              버튼으로 직접 지울 수도 있어요.
+            </li>
+          </ul>
+        </section>
+
         <section aria-labelledby="set-reset" className="flex flex-col gap-2 border-t border-line pt-4">
           <h3 id="set-reset" className="text-sm font-medium text-muted">
             데이터
