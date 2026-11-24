@@ -199,9 +199,9 @@ export function loadSnapshot(nowDate: number): RestoreResult {
   return restoreFromSnapshot(r.value, nowDate);
 }
 
-/** 스냅샷을 지운다(저장·버리기·홈으로 돌아갈 때) */
-export function clearSnapshot(): void {
-  removeItem(STORAGE_KEYS.snapshot);
+/** 스냅샷을 지운다(저장·버리기·홈으로 돌아갈 때). 지우지 못했으면 false(호출 쪽이 사용자에게 알린다) */
+export function clearSnapshot(): boolean {
+  return removeItem(STORAGE_KEYS.snapshot).ok;
 }
 
 // ───────────────────────── 운동 기록 저장 (PLAN 작업 20) ─────────────────────────
@@ -333,8 +333,14 @@ export const SAVE_MESSAGES = {
   storage:
     "저장하지 못했어요. 저장 공간이 부족하거나 브라우저 설정 때문일 수 있어요. 다시 저장해 보세요.",
   corrupt:
-    "저장된 기록 목록이 손상돼 있어서 새 기록을 저장하지 않았어요(기존 기록을 덮어쓰지 않기 위해서예요). 홈의 데이터 초기화 뒤에 다시 시도해 주세요.",
+    "저장된 기록 목록이 손상돼 있어서 새 기록을 저장하지 않았어요(기존 기록을 덮어쓰지 않기 위해서예요). 아래 \"손상된 기록 지우고 이 기록 저장\"을 누르거나, 설정(톱니)의 데이터 초기화 뒤에 다시 시도해 주세요.",
 } as const;
+
+/** 저장 옵션 */
+export type SaveOptions = {
+  /** true면 손상된 기존 목록을 버리고 이 기록 하나로 새로 시작한다(사용자가 확인한 뒤에만 쓴다) */
+  replaceCorrupt?: boolean;
+};
 
 /**
  * 기록 하나를 저장한다. 같은 ID가 있으면 그 기록을 덮어쓰고, 없으면 목록 끝에 더한다.
@@ -342,7 +348,7 @@ export const SAVE_MESSAGES = {
  * - 쓴 뒤 다시 읽어 실제로 들어갔는지 확인한다(실패를 조용히 넘기지 않기 위함).
  * 화면이 그려진 뒤(이벤트 처리 안)에서만 부른다.
  */
-export function saveRecord(rec: WorkoutRecord): SaveResult {
+export function saveRecord(rec: WorkoutRecord, options: SaveOptions = {}): SaveResult {
   const fail = (reason: "corrupt" | "storage"): SaveResult => ({
     ok: false,
     reason,
@@ -351,9 +357,10 @@ export function saveRecord(rec: WorkoutRecord): SaveResult {
 
   const current = readItem<WorkoutRecord[]>(STORAGE_KEYS.records, isRecordList);
   if (!current.ok) return fail("storage");
-  if (current.invalid) return fail("corrupt");
+  // 손상돼 있으면 기본은 덮어쓰지 않고 알린다. 사용자가 확인했을 때만 이 기록으로 새로 시작한다.
+  if (current.invalid && !options.replaceCorrupt) return fail("corrupt");
 
-  const list = current.value ?? [];
+  const list = current.invalid ? [] : (current.value ?? []);
   const next = list.some((r) => r.id === rec.id)
     ? list.map((r) => (r.id === rec.id ? rec : r))
     : [...list, rec];

@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import Mascot from "./Mascot";
 import { loadBody, weightOf, type BodyState } from "@/lib/body";
 import { sessionKcal } from "@/lib/calories";
-import type { SaveResult } from "@/lib/records";
+import type { SaveOptions, SaveResult } from "@/lib/records";
 import { completedSetCount, totalSetCount, type SetStatus } from "@/lib/machine";
 import { EDIT_REPS_MAX, EDIT_REPS_MIN, activeTotalMs, type Session } from "@/lib/session";
 
@@ -26,7 +26,7 @@ type Props = {
   /** 세트 하나의 반복 수를 고쳤을 때 */
   onEditReps: (exerciseIndex: number, setIndex: number, reps: number) => void;
   /** 기록 저장. 연속 클릭으로 무시되면 null */
-  onSave: () => SaveResult | null;
+  onSave: (options?: SaveOptions) => SaveResult | null;
   /** 저장에 성공한 뒤(홈으로 돌아가며 안내를 보여 준다) */
   onSaved: () => void;
   /** 저장 안 하고 버리기를 확인했을 때, 또는 기록할 세트가 없을 때의 [홈으로] */
@@ -63,17 +63,23 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
     setBody(loadBody());
   }, []);
 
-  function handleSave() {
+  // 기존 기록 목록이 손상돼 저장이 막혔을 때: 종료 화면에서는 설정에 갈 수 없으므로 여기서 새로 시작할 수 있게 한다
+  const [corrupt, setCorrupt] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState(false);
+
+  function handleSave(options?: SaveOptions) {
     if (saving) return;
     setSaving(true);
     setError(null);
-    const result = onSave();
+    const result = onSave(options);
     if (result === null) {
       setSaving(false); // 연속 클릭으로 무시됨
     } else if (result.ok) {
       onSaved();
     } else {
       setError(result.message); // 조용히 넘기지 않고 알린다
+      setCorrupt(result.reason === "corrupt");
+      setConfirmReplace(false);
       setSaving(false);
     }
   }
@@ -148,7 +154,7 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
             </>
           ) : (
             <p className="text-sm text-muted">
-              홈에서 체중(선택)을 입력하면 예상 소모 칼로리를 볼 수 있어요.
+              홈의 설정(톱니)에서 체중(선택)을 입력하면 예상 소모 칼로리를 볼 수 있어요.
             </p>
           )}
         </section>
@@ -221,12 +227,46 @@ export default function Finish({ session, onEditReps, onSave, onSaved, onHome }:
 
       <button
         type="button"
-        onClick={handleSave}
+        onClick={() => handleSave()}
         disabled={saving}
         className="min-h-14 rounded-3xl bg-accent px-4 text-xl font-bold text-on-accent shadow-button press disabled:opacity-40"
       >
         {error ? "다시 저장" : saving ? "저장하는 중…" : "기록 저장"}
       </button>
+
+      {corrupt &&
+        (confirmReplace ? (
+          <div role="alertdialog" aria-label="손상된 기록 지우고 저장 확인" className="flex flex-col gap-2 rounded-3xl bg-surface shadow-card p-4">
+            <p className="text-sm">
+              읽을 수 없는 이전 기록은 사라지고, 이번 운동 기록만 새로 저장돼요. 계속할까요?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmReplace(false)}
+                className="min-h-11 rounded-xl bg-chip px-4"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave({ replaceCorrupt: true })}
+                disabled={saving}
+                className="min-h-11 rounded-xl bg-danger-soft px-4 text-danger disabled:opacity-40"
+              >
+                지우고 저장
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmReplace(true)}
+            className="min-h-11 rounded-xl bg-chip px-4 text-base font-bold"
+          >
+            손상된 기록 지우고 이 기록 저장
+          </button>
+        ))}
 
       {confirmDiscard ? (
         <div className="flex flex-col gap-2 rounded-3xl bg-surface shadow-card p-4">

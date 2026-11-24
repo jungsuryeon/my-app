@@ -188,6 +188,21 @@ describe("기록 저장", () => {
     expect(store.get("reptimer:records")).toBe("{깨짐");
   });
 
+  it("replaceCorrupt를 켜면 손상된 목록을 버리고 이 기록 하나로 새로 시작한다", () => {
+    store.set("reptimer:records", "{깨짐");
+    const rec = make("a");
+    expect(saveRecord(rec, { replaceCorrupt: true })).toEqual({ ok: true });
+    const r = loadRecords();
+    expect(r.ok && !r.invalid && r.records).toEqual([rec]);
+  });
+
+  it("replaceCorrupt를 켜도 멀쩡한 목록은 지우지 않는다", () => {
+    expect(saveRecord(make("a")).ok).toBe(true);
+    expect(saveRecord(make("b"), { replaceCorrupt: true }).ok).toBe(true);
+    const r = loadRecords();
+    expect(r.ok && r.records.map((x) => x.id)).toEqual(["a", "b"]);
+  });
+
   it("모양이 다른 기록이 섞여 있어도 덮어쓰지 않는다", () => {
     store.set("reptimer:records", JSON.stringify({ v: 1, data: [{ id: 1 }] }));
     expect(saveRecord(make("a")).ok).toBe(false);

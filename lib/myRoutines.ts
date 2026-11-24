@@ -102,7 +102,7 @@ export type RoutinesResult =
 
 export const ROUTINE_MESSAGES = {
   storage: "저장하지 못했어요. 저장 공간이 부족하거나 브라우저 설정 때문일 수 있어요. 다시 시도해 주세요.",
-  corrupt: "저장된 루틴 목록이 손상돼 있어서 변경하지 않았어요(기존 루틴을 덮어쓰지 않기 위해서예요). 홈의 데이터 초기화 뒤에 다시 시도해 주세요.",
+  corrupt: "저장된 루틴 목록이 손상돼 있어서 변경하지 않았어요(기존 루틴을 덮어쓰지 않기 위해서예요). 설정(톱니)의 데이터 초기화 뒤에 다시 시도해 주세요.",
   limit: `루틴은 ${MY_ROUTINE_LIMITS.routines}개까지 만들 수 있어요. 안 쓰는 루틴을 삭제해 주세요.`,
   missing: "이미 없는 루틴이에요.",
 } as const;

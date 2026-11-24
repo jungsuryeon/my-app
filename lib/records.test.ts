@@ -160,9 +160,11 @@ describe("복원: 종료 화면(저장 전)", () => {
 describe("저장·불러오기·삭제", () => {
   let store: Map<string, string>;
   let failWrites = false;
+  let failRemove = false;
   beforeEach(() => {
     store = new Map();
     failWrites = false;
+    failRemove = false;
     (globalThis as unknown as { window: unknown }).window = {
       localStorage: {
         getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
@@ -170,7 +172,10 @@ describe("저장·불러오기·삭제", () => {
           if (failWrites) throw new Error("quota");
           store.set(k, v);
         },
-        removeItem: (k: string) => void store.delete(k),
+        removeItem: (k: string) => {
+          if (failRemove) throw new Error("blocked");
+          store.delete(k);
+        },
         get length() {
           return store.size;
         },
@@ -207,7 +212,13 @@ describe("저장·불러오기·삭제", () => {
 
   it("지우면 더 이상 복원되지 않는다", () => {
     saveSnapshot(snap());
-    clearSnapshot();
+    expect(clearSnapshot()).toBe(true);
     expect(loadSnapshot(T0).kind).toBe("none");
+  });
+
+  it("지우지 못하면 false를 돌려준다(호출 쪽이 사용자에게 알린다)", () => {
+    saveSnapshot(snap());
+    failRemove = true;
+    expect(clearSnapshot()).toBe(false);
   });
 });

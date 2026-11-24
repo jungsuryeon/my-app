@@ -40,6 +40,7 @@ import {
   saveRecord,
   saveSnapshot,
   type RestoreResult,
+  type SaveOptions,
   type SaveResult,
 } from "@/lib/records";
 import { loadBody, weightOf } from "@/lib/body";
@@ -242,7 +243,7 @@ export function useWorkout() {
    * 같은 기록 ID로는 덮어쓰기만 한다. 성공하면 호출하는 쪽이 홈으로 돌아가며 진행 상태를 지운다.
    * 연속 클릭으로 무시됐으면 null.
    */
-  const save = useCallback((): SaveResult | null => {
+  const save = useCallback((options?: SaveOptions): SaveResult | null => {
     const result: { value: SaveResult | null } = { value: null };
     guard.run("save", () => {
       const s = sessionRef.current;
@@ -258,6 +259,7 @@ export function useWorkout() {
           // 저장 버튼을 누른 이벤트 안에서 체중을 읽는다(없으면 칼로리는 기록하지 않는다)
           bodyWeightKg: weightOf(loadBody()),
         }),
+        options,
       );
     });
     return result.value;
@@ -299,13 +301,14 @@ export function useWorkout() {
     [commit, engine],
   );
 
-  /** 세션을 버리고 홈으로 돌아갈 때 */
-  const exit = useCallback(() => {
+  /** 세션을 버리고 홈으로 돌아갈 때. 저장해 둔 진행 상태를 지우지 못했으면 false */
+  const exit = useCallback((): boolean => {
     engine.pause();
     setAwayPaused(false);
-    clearSnapshot(); // 저장해 둔 진행 상태도 지운다
+    const cleared = clearSnapshot(); // 저장해 둔 진행 상태도 지운다
     metaRef.current = null;
     commit(null);
+    return cleared;
   }, [commit, engine]);
 
   const active = session !== null && ACTIVE.includes(session.machine.phase);

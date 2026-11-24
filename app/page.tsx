@@ -17,6 +17,9 @@ import type { Routine } from "@/lib/routines";
 
 // 앱은 이 한 경로(/)의 클라이언트 컴포넌트에서 화면을 바꿔 가며 동작한다.
 // 화면은 상태로 정해진다: 세션이 없으면 홈/첫 준비 화면, 있으면 세션 상태(READY·진행·종료)에 따른 화면.
+const SNAPSHOT_CLEAR_FAILED =
+  "진행 중이던 운동 상태를 지우지 못했어요. 다시 열면 이어하기가 뜰 수 있는데, 그때는 저장 안 하고 종료를 눌러 주세요.";
+
 export default function Page() {
   const workout = useWorkout();
   const { session } = workout;
@@ -47,12 +50,15 @@ export default function Page() {
     setNotice(r.notice);
   }, [restore]);
 
-  function goHome() {
-    workout.exit();
+  /** 홈으로 돌아간다. 진행 상태를 지우지 못했으면 false */
+  function goHome(): boolean {
+    const cleared = workout.exit();
     setSelected(null);
     setEndDialog(null);
-    setNotice(null);
+    // 진행 상태를 지우지 못하면 다시 열었을 때 "이어하기"가 뜰 수 있으므로 알린다
+    setNotice(cleared ? null : SNAPSHOT_CLEAR_FAILED);
     setTab("home");
+    return cleared;
   }
 
   /** "전체 종료" 탭: 진행 중이면 먼저 멈추고 확인창을 연다 */
@@ -153,8 +159,8 @@ export default function Page() {
           onEditReps={workout.editReps}
           onSave={workout.save}
           onSaved={() => {
-            goHome(); // 진행 상태를 지우고 홈으로
-            setNotice("기록을 저장했어요.");
+            const cleared = goHome(); // 진행 상태를 지우고 홈으로
+            setNotice(cleared ? "기록을 저장했어요." : `기록은 저장했어요. ${SNAPSHOT_CLEAR_FAILED}`);
           }}
           onHome={goHome}
         />
