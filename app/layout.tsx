@@ -7,11 +7,12 @@ export const metadata: Metadata = {
 };
 
 // 모바일 화면 기준: 가로 폭에 맞추고 안전 영역(노치·홈 바)까지 채운다.
-// 사용자가 필요하면 핀치로 확대할 수 있도록 확대 제한(maximumScale)은 두지 않는다.
-// 입력칸 글자를 16px 이상으로 두어 iPhone이 입력 때 저절로 확대하는 것은 막는다(globals.css).
+// 운동 중에는 화면이 흔들리거나 확대되지 않고 고정되어 있는 것이 좋아서 확대를 막는다(maximumScale: 1).
+// 입력칸 글자도 16px 이상으로 두어 iPhone이 입력 때 저절로 확대하지 않게 한다(globals.css).
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
   viewportFit: "cover",
   themeColor: "#fff5ea",
 };
